@@ -134,16 +134,22 @@ export default function Home() {
                 transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
                 className="relative w-full aspect-square md:w-[480px] md:h-[480px] mx-auto bg-slate-900 border-2 border-white/5 overflow-hidden shadow-2xl flex items-center justify-center p-2 group-hover:border-sky-500/20 transition-all"
               >
-                <div className="w-full h-full overflow-hidden relative grayscale hover:grayscale-0 transition-all duration-1000">
-                  <Image
-                    src={profile?.photo_url || "/profile.png"}
-                    alt="Engineer"
-                    fill
-                    className="object-cover scale-110"
-                    priority
-                  />
-                  <div className="absolute inset-0 bg-sky-500/10 mix-blend-overlay" />
-                </div>
+                {isLoading || !profile?.photo_url ? (
+                  <div className="w-full h-full bg-slate-800 animate-pulse flex items-center justify-center">
+                    <div className="text-[10px] font-mono text-white/20 uppercase tracking-[0.5em] animate-pulse">Scanning_Bio...</div>
+                  </div>
+                ) : (
+                  <div className="w-full h-full overflow-hidden relative grayscale hover:grayscale-0 transition-all duration-1000">
+                    <Image
+                      src={profile.photo_url}
+                      alt="Engineer"
+                      fill
+                      className="object-cover scale-110"
+                      priority
+                    />
+                    <div className="absolute inset-0 bg-sky-500/10 mix-blend-overlay" />
+                  </div>
+                )}
               </motion.div>
 
               {/* Floating Data Panels */}

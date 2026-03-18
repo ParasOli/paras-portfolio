@@ -20,7 +20,7 @@ export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const { profile } = useProfile();
+  const { profile, isLoading } = useProfile();
   const profilePhoto = profile?.photo_url;
 
   useEffect(() => {
@@ -49,12 +49,14 @@ export default function Navbar() {
             transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
             className="w-10 h-10 bg-slate-900 border border-sky-500/30 flex items-center justify-center transition-colors overflow-hidden shrink-0 shadow-[0_0_15px_rgba(14,165,233,0.2)]"
           >
-            {profilePhoto ? (
+            {profilePhoto && !isLoading ? (
               <div className="w-full h-full relative">
                 <Image src={profilePhoto} alt="P" width={40} height={40} className="object-cover w-full h-full scale-110" quality={80} />
               </div>
             ) : (
-              <span className="text-xs font-bold text-sky-400 font-mono">P</span>
+              <div className="w-full h-full bg-slate-800 flex items-center justify-center animate-pulse">
+                <span className="text-xs font-bold text-sky-400 font-mono">P</span>
+              </div>
             )}
           </motion.div>
           <span className="text-white font-bold tracking-tight">Paras<span className="text-slate-500">Oli</span></span>
