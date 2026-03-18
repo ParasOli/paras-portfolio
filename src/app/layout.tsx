@@ -19,6 +19,10 @@ export const metadata: Metadata = {
   description: "Modern portfolio showcasing QA Automation expertise, projects, and skills.",
 };
 
+import { ProfileProvider } from "@/context/ProfileContext";
+
+import CustomCursor from "@/components/CustomCursor";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -30,11 +34,13 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen flex flex-col`}
         suppressHydrationWarning
       >
-        <Navbar />
-        <main className="flex-grow pt-20">
-          {children}
-        </main>
-        <Footer />
+        <ProfileProvider>
+          <Navbar />
+          <main className="flex-grow pt-20">
+            {children}
+          </main>
+          <Footer />
+        </ProfileProvider>
       </body>
     </html>
   );

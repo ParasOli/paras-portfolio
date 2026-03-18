@@ -4,6 +4,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
+import { supabase } from "@/lib/supabase";
+import Image from "next/image";
+import { useProfile } from "@/context/ProfileContext";
 
 const links = [
   { href: "/", label: "Home" },
@@ -17,6 +20,9 @@ export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+  const { profile } = useProfile();
+  const profilePhoto = profile?.photo_url;
+
   useEffect(() => {
     const handleScroll = () => {
       setScrolled(window.scrollY > 50);
@@ -28,22 +34,30 @@ export default function Navbar() {
   return (
     <header className="fixed top-0 w-full z-50 px-6 py-6 pointer-events-none">
       <nav
-        className={`max-w-4xl mx-auto h-16 flex items-center justify-between px-8 rounded-full transition-all duration-700 pointer-events-auto relative ${
+        className={`max-w-4xl mx-auto h-16 flex items-center justify-between px-8 rounded-full transition-all duration-700 pointer-events-auto relative mt-4 md:mt-6 ${
           scrolled 
-            ? "glass shadow-[0_20px_50px_rgba(0,0,0,0.5)] border-white/10 scale-[0.98] mt-2" 
-            : "bg-white/5 border border-white/5"
+            ? "glass shadow-[0_20px_50px_rgba(0,0,0,0.5)] border-white/10 scale-[0.98]" 
+            : "bg-white/5 border border-white/5 shadow-lg"
         }`}
       >
         <div className="scanner-line opacity-[0.1] rounded-full" />
-        <Link href="/" className="text-xl font-bold tracking-tighter hover:opacity-70 transition-opacity flex items-center gap-2 group relative">
+        <Link href="/" className="text-xl font-bold tracking-tighter hover:opacity-70 transition-opacity flex items-center gap-4 group relative">
           <motion.div 
-            animate={{ rotate: [0, 90, 180, 270, 360] }}
-            transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-            className="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center group-hover:border-[var(--neon-cyan)]/50 transition-colors"
+            animate={{ 
+              borderRadius: ["30% 70% 70% 30%", "70% 30% 30% 70%", "30% 70% 70% 30%"]
+            }}
+            transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+            className="w-10 h-10 bg-slate-900 border border-sky-500/30 flex items-center justify-center transition-colors overflow-hidden shrink-0 shadow-[0_0_15px_rgba(14,165,233,0.2)]"
           >
-            <span className="text-xs text-[var(--neon-cyan)] neon-text">P</span>
+            {profilePhoto ? (
+              <div className="w-full h-full relative">
+                <Image src={profilePhoto} alt="P" width={40} height={40} className="object-cover w-full h-full scale-110" quality={80} />
+              </div>
+            ) : (
+              <span className="text-xs font-bold text-sky-400 font-mono">P</span>
+            )}
           </motion.div>
-          <span className="group-hover:text-[var(--neon-cyan)] transition-colors text-gradient">Paras<span className="text-white/40 group-hover:text-[var(--neon-cyan)]/40">Oli</span></span>
+          <span className="text-white font-bold tracking-tight">Paras<span className="text-slate-500">Oli</span></span>
         </Link>
         
         <div className="hidden md:flex items-center gap-1">
@@ -51,14 +65,14 @@ export default function Navbar() {
             <Link
               key={link.href}
               href={link.href}
-              className={`relative px-4 py-2 text-xs font-bold tracking-[0.1em] uppercase transition-all rounded-full ${
-                pathname === link.href ? "text-[var(--neon-cyan)] neon-text" : "text-white/40 hover:text-white"
+              className={`relative px-4 py-2 text-[10px] font-bold tracking-[0.2em] uppercase transition-all rounded-lg ${
+                pathname === link.href ? "text-sky-400" : "text-slate-400 hover:text-white"
               }`}
             >
               {pathname === link.href && (
                 <motion.span
                   layoutId="nav-pill"
-                  className="absolute inset-0 bg-white/5 border border-white/10 rounded-full -z-10 shadow-[0_0_20px_rgba(0,242,255,0.1)]"
+                  className="absolute inset-0 bg-slate-800/50 border border-slate-700/50 rounded-lg -z-10 shadow-[0_4px_12px_rgba(0,0,0,0.4)]"
                   transition={{ type: "spring", stiffness: 350, damping: 30 }}
                 />
               )}
