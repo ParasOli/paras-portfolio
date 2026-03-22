@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabase";
 
 interface Profile {
   photo_url: string;
+  cv_url: string;
   full_name: string;
   bio: string;
   github_url: string;
@@ -28,7 +29,7 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
     try {
       const { data, error } = await supabase
         .from("profiles")
-        .select("photo_url, full_name, bio, github_url, linkedin_url")
+        .select("photo_url, cv_url, full_name, bio, github_url, linkedin_url")
         .limit(1)
         .single();
       
