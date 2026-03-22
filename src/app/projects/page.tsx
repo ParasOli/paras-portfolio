@@ -5,6 +5,7 @@ import PageTransition from "@/components/PageTransition";
 import ProjectCard from "@/components/ProjectCard";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/lib/supabase";
+import { parseBio, sortItems } from "@/lib/utils";
 
 const categories = ["All", "UI Testing", "API Testing", "Performance", "Security"];
 
@@ -30,15 +31,16 @@ export default function Projects() {
         return;
       }
       
-      const { data, error } = await supabase
-        .from("projects")
-        .select("*")
-        .order("created_at", { ascending: false });
+      const [pRes, prRes] = await Promise.all([
+        supabase.from("projects").select("*").order("created_at", { ascending: false }),
+        supabase.from("profiles").select("bio").limit(1).single()
+      ]);
 
-      if (error) {
-        console.error("Error fetching projects:", error);
+      if (pRes.error) {
+        console.error("Error fetching projects:", pRes.error);
       } else {
-        setProjects(data || []);
+        const { orderProjects } = parseBio(prRes.data?.bio || "");
+        setProjects(sortItems(pRes.data || [], orderProjects));
       }
       setIsLoading(false);
     }
@@ -72,7 +74,7 @@ export default function Projects() {
           {/* Filter System */}
           <div className="flex items-center justify-center gap-2 p-1.5 bg-slate-900 border border-white/5 rounded-2xl w-fit mx-auto mb-20 shadow-xl">
             {[
-              { id: "all", label: "All Systems" },
+              { id: "all", label: "All Projects" },
               { id: "project", label: "Frameworks" },
               { id: "writeup", label: "Case Studies" }
             ].map((cat) => (

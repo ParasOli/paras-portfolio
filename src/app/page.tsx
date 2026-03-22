@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import Image from "next/image";
+import { useState, useEffect } from "react";
 import { useProfile } from "@/context/ProfileContext";
 import TestRunner from "@/components/TestRunner";
 import Typewriter from "@/components/Typewriter";
@@ -9,34 +10,15 @@ import Button from "@/components/Button";
 import PageTransition from "@/components/PageTransition";
 import CountUp from "@/components/CountUp";
 import Link from "next/link";
-import { FaArrowRight, FaGithub, FaLinkedin, FaBug } from "react-icons/fa";
+import { FaArrowRight, FaGithub, FaLinkedin, FaEnvelope, FaFileDownload } from "react-icons/fa";
+import { parseBio, downloadFile } from "@/lib/utils";
 
 export default function Home() {
   const { profile, isLoading } = useProfile();
+  const [imageLoaded, setImageLoaded] = useState(false);
 
-  const parseBio = (fullBio: string) => {
-    if (!fullBio) return { cleanBio: "", terms: ["UI Testing", "API Testing", "CI/CD", "Health Checkups"], services: [] };
 
-    const termMatch = fullBio.match(/\[terms:(.*?)\]/);
-    const svcMatch = fullBio.match(/\[services:(.*?)\]/);
-
-    const terms = termMatch ? termMatch[1].split(",").map(t => t.trim()) : ["UI Testing", "API Testing", "CI/CD", "Health Checkups"];
-    const services = svcMatch 
-      ? svcMatch[1].split(',').filter(s => s.includes('|')).map(s => {
-          const [title, desc] = s.split('|');
-          return { title: title.trim(), desc: (desc || "").trim() };
-        })
-      : [];
-
-    const cleanBio = fullBio
-      .replace(termMatch ? termMatch[0] : "", "")
-      .replace(svcMatch ? svcMatch[0] : "", "")
-      .trim();
-
-    return { cleanBio, terms, services };
-  };
-
-  const { cleanBio, terms, services } = parseBio(profile?.bio || "");
+  const { cleanBio, terms, services, email, cvFilename } = parseBio(profile?.bio || "");
 
   return (
     <PageTransition>
@@ -82,12 +64,26 @@ export default function Home() {
               </p>
             </div>
 
-            <div className="flex flex-wrap gap-6 items-center">
+            <div className="flex flex-wrap gap-4 items-center">
               <Link href="/projects">
                 <button className="h-14 px-8 bg-white text-black font-bold rounded-2xl hover:bg-sky-400 hover:text-white transition-all transform hover:scale-105 flex items-center gap-3">
-                  View Systems <FaArrowRight />
+                  View Projects <FaArrowRight />
                 </button>
               </Link>
+              {profile?.cv_url && (
+                <div className="relative group/cv">
+                  <button
+                    onClick={() => downloadFile(profile.cv_url!, cvFilename || "Paras_Oli_CV.pdf")}
+                    className="h-14 w-14 bg-white/5 border border-white/10 rounded-2xl hover:border-sky-500/50 hover:bg-sky-500/10 hover:text-sky-400 text-slate-400 transition-all flex items-center justify-center"
+                    aria-label="Download CV"
+                  >
+                    <FaFileDownload size={20} />
+                  </button>
+                  <span className="absolute -top-9 left-1/2 -translate-x-1/2 whitespace-nowrap text-[10px] font-bold text-sky-400 bg-slate-900 border border-white/10 px-3 py-1 rounded-lg opacity-0 group-hover/cv:opacity-100 transition-opacity pointer-events-none uppercase tracking-widest">
+                    Download CV
+                  </span>
+                </div>
+              )}
               <div className="flex gap-6 items-center">
                 {profile?.github_url && (
                   <a href={profile.github_url} target="_blank" rel="noreferrer" className="text-slate-600 hover:text-white transition-all transform hover:scale-110">
@@ -97,6 +93,11 @@ export default function Home() {
                 {profile?.linkedin_url && (
                   <a href={profile.linkedin_url} target="_blank" rel="noreferrer" className="text-slate-600 hover:text-white transition-all transform hover:scale-110">
                     <FaLinkedin size={28} />
+                  </a>
+                )}
+                {email && (
+                  <a href={`mailto:${email}`} className="text-slate-600 hover:text-white transition-all transform hover:scale-110">
+                    <FaEnvelope size={28} />
                   </a>
                 )}
               </div>
@@ -134,18 +135,20 @@ export default function Home() {
                 transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
                 className="relative w-full aspect-square md:w-[480px] md:h-[480px] mx-auto bg-slate-900 border-2 border-white/5 overflow-hidden shadow-2xl flex items-center justify-center p-2 group-hover:border-sky-500/20 transition-all"
               >
-                {isLoading || !profile?.photo_url ? (
-                  <div className="w-full h-full bg-slate-800 animate-pulse flex items-center justify-center">
-                    <div className="text-[10px] font-mono text-white/20 uppercase tracking-[0.5em] animate-pulse">Scanning_Bio...</div>
-                  </div>
-                ) : (
-                  <div className="w-full h-full overflow-hidden relative grayscale hover:grayscale-0 transition-all duration-1000">
+                {/* Always show placeholder pulse if not loaded */}
+                <div className={`absolute inset-0 bg-slate-800 flex items-center justify-center transition-opacity duration-1000 ${imageLoaded ? 'opacity-0 pointer-events-none' : 'opacity-100 animate-pulse'}`}>
+                  <div className="text-[10px] font-mono text-white/20 uppercase tracking-[0.5em]">Scanning_Bio...</div>
+                </div>
+
+                {profile?.photo_url && (
+                  <div className={`w-full h-full overflow-hidden relative grayscale hover:grayscale-0 transition-all duration-[1500ms] ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}>
                     <Image
                       src={profile.photo_url}
                       alt="Engineer"
                       fill
                       className="object-cover scale-110"
                       priority
+                      onLoad={() => setImageLoaded(true)}
                     />
                     <div className="absolute inset-0 bg-sky-500/10 mix-blend-overlay" />
                   </div>
@@ -199,47 +202,6 @@ export default function Home() {
           </motion.div>
         </div>
 
-        {/* Services Section */}
-        {services.length > 0 && (
-          <motion.div 
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="mt-32 md:mt-48 pb-24"
-          >
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-16 px-4">
-              <div>
-                <h2 className="text-[10px] font-bold tracking-[0.4em] mb-4 text-sky-500 uppercase font-mono">Expertise_Cloud</h2>
-                <h3 className="text-4xl md:text-5xl font-bold tracking-tight text-white">Services_I_Provide</h3>
-              </div>
-              <p className="text-slate-500 max-w-sm text-sm font-light leading-relaxed">
-                Strategic engineering solutions designed for high-performance automation ecosystems and seamless quality cycles.
-              </p>
-            </div>
-
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 px-4">
-              {services.map((svc, i) => (
-                <div 
-                  key={i}
-                  className="group relative p-8 rounded-[2.5rem] bg-slate-900/40 border border-white/5 hover:border-sky-500/20 transition-all overflow-hidden"
-                >
-                  <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
-                    <span className="text-6xl font-black text-white">0{i+1}</span>
-                  </div>
-                  <div className="relative z-10">
-                    <div className="w-12 h-12 rounded-2xl bg-sky-500/10 flex items-center justify-center text-sky-400 mb-8 border border-sky-500/10 group-hover:border-sky-500/30 transition-colors">
-                      <FaArrowRight className="-rotate-45 group-hover:rotate-0 transition-transform" />
-                    </div>
-                    <h4 className="text-xl font-bold text-white mb-4 group-hover:text-sky-400 transition-colors">{svc.title}</h4>
-                    <p className="text-slate-500 text-sm leading-relaxed font-light group-hover:text-slate-400 transition-colors">
-                      {svc.desc}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </motion.div>
-        )}
       </div>
     </PageTransition>
   );

@@ -108,44 +108,46 @@ export default function ProjectCard({
       </div>
 
       {/* Content Engine */}
-      <div className="p-8 flex flex-col flex-1 relative">
-        {/* Slanted Title Backdrop */}
-        <div className="absolute top-0 left-0 w-full h-16 bg-slate-950/80 -skew-y-2 origin-left -translate-y-4 z-0 border-b border-sky-500/10" />
-        
-        <div className="flex justify-between items-start mb-6 relative z-10">
-          <h3 className="text-xl font-bold text-sky-400 leading-tight group-hover:text-sky-300 transition-colors">
+      <div className="p-8 pt-4 flex flex-col flex-1 relative">
+        <div className="mb-6 relative z-10">
+          <h3 className="text-2xl font-bold text-white leading-tight group-hover:text-sky-400 transition-colors">
             {title}
           </h3>
-          <div className="flex gap-4 opacity-40 group-hover:opacity-100 transition-opacity">
-            {githubUrl && (
-              <a href={githubUrl} target="_blank" rel="noreferrer" className="text-white hover:text-sky-400 transition-colors">
-                <FaGithub size={18} />
-              </a>
-            )}
-            {liveUrl && (
-              <a href={liveUrl} target="_blank" rel="noreferrer" className="text-white hover:text-sky-400 transition-colors">
-                <FaExternalLinkAlt size={16} />
-              </a>
-            )}
-          </div>
         </div>
-
+        
         <p className="text-slate-400 text-sm leading-relaxed font-light mb-8 flex-1">
           {description}
         </p>
 
-        {/* Technical Footer */}
-        <div className="mt-auto pt-6 border-t border-slate-800/50 flex items-center justify-between">
-          <div className="flex gap-3">
-            <span className="text-[9px] font-mono text-slate-600 uppercase tracking-widest">Build: Success</span>
-            <span className="text-[9px] font-mono text-slate-600 uppercase tracking-widest">Tests: Verified</span>
-          </div>
-          <motion.div 
-            whileHover={{ x: 3 }}
-            className="text-[10px] font-bold text-sky-500 uppercase tracking-widest cursor-pointer flex items-center gap-2"
-          >
-            Details <FaChevronRight size={8} />
-          </motion.div>
+        {/* Action Links */}
+        <div className="mt-auto grid grid-cols-2 gap-4">
+          {githubUrl && (
+            <a 
+              href={githubUrl} 
+              target="_blank" 
+              rel="noreferrer" 
+              className="flex items-center justify-center gap-2 py-3 px-4 bg-slate-800/50 hover:bg-slate-800 border border-white/5 hover:border-sky-500/30 rounded-xl text-xs font-bold text-slate-300 hover:text-white transition-all group/btn"
+            >
+              <FaGithub size={16} />
+              <span>Source Code</span>
+            </a>
+          )}
+          {liveUrl && (
+            <a 
+              href={liveUrl} 
+              target="_blank" 
+              rel="noreferrer" 
+              className="flex items-center justify-center gap-2 py-3 px-4 bg-sky-500/10 hover:bg-sky-500 border border-sky-500/20 hover:border-sky-500 rounded-xl text-xs font-bold text-sky-400 hover:text-white transition-all"
+            >
+              <FaExternalLinkAlt size={14} />
+              <span>Live Project</span>
+            </a>
+          )}
+          {!liveUrl && !githubUrl && (
+            <div className="col-span-2 text-center py-3 text-[10px] font-mono text-slate-600 uppercase tracking-widest">
+              Private Repository
+            </div>
+          )}
         </div>
       </div>
     </motion.div>

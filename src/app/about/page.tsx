@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import PageTransition from "@/components/PageTransition";
 import Button from "@/components/Button";
 import Image from "next/image";
+import { useProfile } from "@/context/ProfileContext";
 import { supabase } from "@/lib/supabase";
 import {
   SiCypress,
@@ -12,9 +13,13 @@ import {
   SiPostman,
   SiJira,
   SiJenkins,
+  SiGithubactions,
+  SiK6,
+  SiBurpsuite
 } from "react-icons/si";
-import { FaFileDownload, FaCode, FaGithub, FaLinkedin } from "react-icons/fa";
+import { FaFileDownload, FaCode, FaGithub, FaLinkedin, FaEnvelope } from "react-icons/fa";
 import Link from "next/link";
+import { parseBio, sortItems, downloadFile } from "@/lib/utils";
 
 interface Experience {
   role: string;
@@ -38,18 +43,20 @@ interface Profile {
 }
 
 export default function About() {
+  const { profile: contextProfile, isLoading: profileLoading } = useProfile();
   const [experience, setExperience] = useState<Experience[]>([]);
   const [certs, setCerts] = useState<Certification[]>([]);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [imageLoaded, setImageLoaded] = useState(false);
 
   const tools = [
+    { name: "Github Actions", icon: <SiGithubactions size={40} /> },
     { name: "Cypress", icon: <SiCypress size={40} /> },
-    { name: "Selenium", icon: <SiSelenium size={40} /> },
-    { name: "Playwright", icon: <FaCode size={40} /> },
+    { name: "K6", icon: <SiK6 size={40} /> },
     { name: "Postman", icon: <SiPostman size={40} /> },
-    { name: "JIRA", icon: <SiJira size={40} /> },
-    { name: "Jenkins", icon: <SiJenkins size={40} /> },
+    { name: "Playwright", icon: <FaCode size={40} /> },
+    { name: "BurpSuite", icon: <SiBurpsuite size={40} /> },
   ];
 
   useEffect(() => {
@@ -57,16 +64,20 @@ export default function About() {
       const [eRes, cRes, pRes] = await Promise.all([
         supabase.from("experience").select("*").order("created_at", { ascending: false }),
         supabase.from("certifications").select("*").order("created_at", { ascending: false }),
-        supabase.from("profiles").select("photo_url, cv_url, full_name, bio, github_url, linkedin_url").limit(1).single()
+        supabase.from("profiles").select("*").limit(1).single()
       ]);
-
-      setExperience(eRes.data || []);
-      setCerts(cRes.data || []);
+      
+      const { orderExperience, orderCerts } = parseBio(pRes.data?.bio || "");
+      
+      setExperience(sortItems(eRes.data || [], orderExperience));
+      setCerts(sortItems(cRes.data || [], orderCerts));
       setProfile(pRes.data || null);
       setIsLoading(false);
     }
     fetchData();
   }, []);
+
+  const { cleanBio, cvFilename, email } = parseBio(profile?.bio || "");
 
   return (
     <PageTransition>
@@ -74,14 +85,23 @@ export default function About() {
         <div className="absolute inset-0 tech-grid opacity-[0.02] pointer-events-none" />
         
         <div className="flex flex-col items-center mb-20 md:mb-24">
-          <div className="relative w-24 h-24 md:w-32 md:h-32 mb-8 rounded-[2rem] overflow-hidden bg-slate-900 border border-slate-800 p-1 shadow-2xl">
-            <div className="w-full h-full rounded-[1.8rem] overflow-hidden relative">
-              <Image
-                src={profile?.photo_url || "/profile.png"}
-                alt="Profile Photo"
-                fill
-                className="object-cover"
-              />
+          <div className="relative w-24 h-24 md:w-32 md:h-32 mb-8 rounded-[2rem] overflow-hidden bg-slate-900 border border-slate-800 p-1 shadow-2xl flex items-center justify-center">
+            {/* Always show placeholder if not loaded */}
+            <div className={`absolute inset-0 bg-slate-800 flex items-center justify-center transition-opacity duration-1000 ${imageLoaded ? 'opacity-0 pointer-events-none' : 'opacity-100 animate-pulse'}`}>
+               <div className="w-full h-full bg-slate-800 rounded-[1.8rem]" />
+            </div>
+
+            <div className={`w-full h-full rounded-[1.8rem] overflow-hidden relative transition-opacity duration-1000 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}>
+              {(profile?.photo_url || contextProfile?.photo_url) && (
+                <Image
+                  src={profile?.photo_url || contextProfile?.photo_url || "/profile.png"}
+                  alt="Profile Photo"
+                  fill
+                  className="object-cover"
+                  priority
+                  onLoad={() => setImageLoaded(true)}
+                />
+              )}
             </div>
           </div>
           <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-center text-white">
@@ -91,13 +111,28 @@ export default function About() {
 
         <div className="flex flex-col lg:flex-row gap-12 lg:gap-16 mb-24">
           <div className="space-y-6 text-base md:text-lg text-white/50 leading-relaxed font-light lg:w-1/2">
-            <p className="text-xl md:text-2xl text-white font-light !leading-relaxed">
-              {profile?.bio || "I am a dedicated QA Automation Engineer with a passion for breaking things in code so the users don't have to."}
-            </p>
+            {isLoading || !cleanBio ? (
+              <div className="space-y-3 animate-pulse">
+                <div className="h-6 bg-white/5 rounded-xl w-full" />
+                <div className="h-6 bg-white/5 rounded-xl w-5/6" />
+                <div className="h-6 bg-white/5 rounded-xl w-4/6" />
+              </div>
+            ) : (
+              <p className="text-xl md:text-2xl text-white font-light !leading-relaxed">
+                {cleanBio}
+              </p>
+            )}
             
             <div className="pt-8 flex flex-wrap gap-8 items-center">
-              <Button variant="primary" href={profile?.cv_url || "/paras-cv.pdf"} target="_blank" className="h-14 px-8 rounded-xl bg-white text-black hover:bg-slate-200">
-                <FaFileDownload className="mr-3" /> Technical_CV.pdf
+              <Button 
+                variant="primary" 
+                onClick={() => {
+                  const url = profile?.cv_url || "/paras-cv.pdf";
+                  downloadFile(url, cvFilename || "Paras_Oli_CV.pdf");
+                }} 
+                className="h-14 px-8 rounded-xl bg-white text-black hover:bg-slate-200"
+              >
+                <FaFileDownload className="mr-3" /> {cvFilename || "Technical_CV.pdf"}
               </Button>
               <div className="flex items-center gap-6">
                 {profile?.github_url && (
@@ -108,6 +143,11 @@ export default function About() {
                 {profile?.linkedin_url && (
                   <a href={profile.linkedin_url} target="_blank" rel="noreferrer" className="text-slate-500 hover:text-white transition-all transform hover:scale-110">
                     <FaLinkedin size={24} />
+                  </a>
+                )}
+                {email && (
+                  <a href={`mailto:${email}`} className="text-slate-500 hover:text-white transition-all transform hover:scale-110">
+                    <FaEnvelope size={24} />
                   </a>
                 )}
               </div>

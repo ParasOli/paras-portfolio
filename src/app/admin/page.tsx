@@ -8,9 +8,11 @@ import { supabase } from "@/lib/supabase";
 import { 
   FaPlus, FaTrash, FaEdit, FaSignOutAlt, FaImage, 
   FaEnvelope, FaUser, FaBriefcase, FaCertificate, 
-  FaCog, FaChevronRight, FaFilePdf, FaGithub, FaLinkedin
+  FaCog, FaChevronRight, FaFilePdf, FaGithub, FaLinkedin,
+  FaGripVertical
 } from "react-icons/fa";
 import Image from "next/image";
+import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
 
 interface Project { id: any; title: string; description: string; image_url: string; github_url: string; live_url: string; type: string; }
 interface Experience { id: any; role: string; company: string; duration: string; description: string; }
@@ -33,6 +35,7 @@ export default function AdminPage() {
 
   // Form State
   const [isEditing, setIsEditing] = useState(false);
+  const [isAdding, setIsAdding] = useState(false);
   const [currentId, setCurrentId] = useState<any>(null);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -60,8 +63,15 @@ export default function AdminPage() {
   const [cvUrl, setCvUrl] = useState("");
   const [profileGithub, setProfileGithub] = useState("");
   const [profileLinkedin, setProfileLinkedin] = useState("");
+  const [typingEmail, setTypingEmail] = useState("");
   const [typingTerms, setTypingTerms] = useState("");
-  const [servicesData, setServicesData] = useState("");
+  const [chatbotContext, setChatbotContext] = useState("");
+  const [chatbotName, setChatbotName] = useState("");
+  const [chatbotSubtitle, setChatbotSubtitle] = useState("");
+  const [cvFilename, setCvFilename] = useState("");
+  const [orderProjects, setOrderProjects] = useState<string[]>([]);
+  const [orderExperience, setOrderExperience] = useState<string[]>([]);
+  const [orderCerts, setOrderCerts] = useState<string[]>([]);
 
   useEffect(() => {
     checkUser();
@@ -84,9 +94,25 @@ export default function AdminPage() {
       supabase.from("messages").select("*").order("created_at", { ascending: false })
     ]);
 
-    setProjects(pRes.data || []);
-    setExperience(eRes.data || []);
-    setCerts(cRes.data || []);
+    const ordProjIds = prRes.data?.bio.match(/\[order_projects:(.*?)\]/)?.[1]?.split(",") || [];
+    const ordExpIds = prRes.data?.bio.match(/\[order_experience:(.*?)\]/)?.[1]?.split(",") || [];
+    const ordCertsIds = prRes.data?.bio.match(/\[order_certs:(.*?)\]/)?.[1]?.split(",") || [];
+
+    const sortItems = (items: any[], ids: string[]) => {
+      if (!ids.length) return items;
+      return [...items].sort((a, b) => {
+        const aIndex = ids.indexOf(a.id.toString());
+        const bIndex = ids.indexOf(b.id.toString());
+        if (aIndex === -1 && bIndex === -1) return 0;
+        if (aIndex === -1) return 1;
+        if (bIndex === -1) return -1;
+        return aIndex - bIndex;
+      });
+    };
+
+    setProjects(sortItems(pRes.data || [], ordProjIds));
+    setExperience(sortItems(eRes.data || [], ordExpIds));
+    setCerts(sortItems(cRes.data || [], ordCertsIds));
     setProfile(prRes.data || null);
     setMessages(mRes.data || []);
     
@@ -106,21 +132,81 @@ export default function AdminPage() {
         setTypingTerms("UI Testing, API Testing, CI/CD");
       }
 
-      // Handle Services
-      const svcMatch = fullBio.match(/\[services:(.*?)\]/);
-      if (svcMatch) {
-        setServicesData(svcMatch[1]);
+      // Handle Chatbot Context
+      const chatMatch = fullBio.match(/\[chat:(.*?)\]/);
+      if (chatMatch) {
+        setChatbotContext(chatMatch[1]);
       } else {
-        setServicesData("Framework Design|Custom end-to-end automation architectures.,API Testing|High-performance REST & GraphQL validation.");
+        setChatbotContext("");
       }
+
+      // Handle Chatbot Name
+      const chatNameMatch = fullBio.match(/\[chat_name:(.*?)\]/);
+      if (chatNameMatch) {
+        setChatbotName(chatNameMatch[1]);
+      } else {
+        setChatbotName("Portfolio AI");
+      }
+
+      // Handle Chatbot Subtitle
+      const chatSubMatch = fullBio.match(/\[chat_sub:(.*?)\]/);
+      if (chatSubMatch) {
+        setChatbotSubtitle(chatSubMatch[1]);
+      } else {
+        setChatbotSubtitle("Expert System v1.1");
+      }
+
+      // Handle Ordering Metadata
+      const cvFileMatch = fullBio.match(/\[cv_file:(.*?)\]/);
+      const emailMatch = fullBio.match(/\[email:(.*?)\]/);
+      const ordProjMatch = fullBio.match(/\[order_projects:(.*?)\]/);
+      const ordExpMatch = fullBio.match(/\[order_experience:(.*?)\]/);
+      const ordCertsMatch = fullBio.match(/\[order_certs:(.*?)\]/);
+      setOrderProjects(ordProjMatch ? ordProjMatch[1].split(",") : []);
+      setOrderExperience(ordExpMatch ? ordExpMatch[1].split(",") : []);
+      setOrderCerts(ordCertsMatch ? ordCertsMatch[1].split(",") : []);
 
       const cleanBio = fullBio
         .replace(termMatch ? termMatch[0] : "", "")
-        .replace(svcMatch ? svcMatch[0] : "", "")
+        .replace(chatMatch ? chatMatch[0] : "", "")
+        .replace(chatNameMatch ? chatNameMatch[0] : "", "")
+        .replace(chatSubMatch ? chatSubMatch[0] : "", "")
+        .replace(cvFileMatch ? cvFileMatch[0] : "", "")
+        .replace(emailMatch ? emailMatch[0] : "", "")
+        .replace(ordProjMatch ? ordProjMatch[0] : "", "")
+        .replace(ordExpMatch ? ordExpMatch[0] : "", "")
+        .replace(ordCertsMatch ? ordCertsMatch[0] : "", "")
         .trim();
       setBio(cleanBio);
     }
     setIsLoading(false);
+  }
+
+  async function handleOnDragEnd(result: DropResult, type: "projects" | "experience" | "certs") {
+    if (!result.destination) return;
+
+    const items = type === "projects" ? [...projects] : type === "experience" ? [...experience] : [...certs];
+    const [reorderedItem] = items.splice(result.source.index, 1);
+    items.splice(result.destination.index, 0, reorderedItem as any);
+
+    const newOrderIds = items.map(i => i.id.toString());
+    
+    if (type === "projects") {
+      setProjects(items as Project[]);
+      setOrderProjects(newOrderIds);
+    } else if (type === "experience") {
+      setExperience(items as Experience[]);
+      setOrderExperience(newOrderIds);
+    } else {
+      setCerts(items as Certification[]);
+      setOrderCerts(newOrderIds);
+    }
+
+    // Auto-save order to profile metadata
+    if (profile) {
+      const meta = `[terms:${typingTerms}] [chat:${chatbotContext}] [chat_name:${chatbotName}] [chat_sub:${chatbotSubtitle}] [cv_file:${cvFilename}] [email:${typingEmail}] [order_projects:${type === "projects" ? newOrderIds.join(",") : orderProjects.join(",")}] [order_experience:${type === "experience" ? newOrderIds.join(",") : orderExperience.join(",")}] [order_certs:${type === "certs" ? newOrderIds.join(",") : orderCerts.join(",")}]`;
+      await supabase.from("profiles").update({ bio: `${bio} ${meta}` }).eq("id", profile.id);
+    }
   }
 
   async function handleLogout() {
@@ -145,7 +231,7 @@ export default function AdminPage() {
       data = { name: certName, certification_url: certUrl };
     } else if (activeTab === "profile") {
       table = "profiles";
-      const meta = `[terms:${typingTerms}] [services:${servicesData}]`;
+      const meta = `[terms:${typingTerms}] [chat:${chatbotContext}] [chat_name:${chatbotName}] [chat_sub:${chatbotSubtitle}] [cv_file:${cvFilename}] [email:${typingEmail}] [order_projects:${orderProjects.join(",")}] [order_experience:${orderExperience.join(",")}] [order_certs:${orderCerts.join(",")}]`;
       data = { 
         full_name: fullName, 
         bio: `${bio} ${meta}`, 
@@ -156,22 +242,45 @@ export default function AdminPage() {
       };
     }
 
-    if (isEditing || (activeTab === "profile" && profile)) {
-      const id = activeTab === "profile" ? profile?.id : currentId;
-      await supabase.from(table).update(data).eq("id", id);
-    } else {
-      await supabase.from(table).insert([data]);
-    }
+    try {
+      const isUpdating = isEditing || (activeTab === "profile" && profile);
+      
+      if (isUpdating) {
+        const id = activeTab === "profile" ? profile?.id : currentId;
+        if (!id && activeTab !== "profile") throw new Error("Missing record ID for update.");
+        
+        const { error } = await supabase.from(table).update(data).eq("id", id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from(table).insert([data]);
+        if (error) throw error;
+      }
 
-    resetForm();
-    await fetchAllData();
+      alert("Changes saved successfully!");
+      resetForm();
+      await fetchAllData();
+    } catch (err: any) {
+      console.error("Submission error:", err);
+      alert(`Error saving changes: ${err.message || "Unknown error"}`);
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   async function handleDelete(id: any, table: string) {
     if (!confirm("Confirm deletion?")) return;
     setIsLoading(true);
-    await supabase.from(table).delete().eq("id", id);
-    await fetchAllData();
+    try {
+      const { error } = await supabase.from(table).delete().eq("id", id);
+      if (error) throw error;
+      alert("Deleted successfully!");
+      await fetchAllData();
+    } catch (err: any) {
+      console.error("Deletion error:", err);
+      alert(`Error deleting record: ${err.message}`);
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   function handleEdit(item: any) {
@@ -194,7 +303,7 @@ export default function AdminPage() {
   }
 
   function resetForm() {
-    setIsEditing(false); setCurrentId(null);
+    setIsEditing(false); setIsAdding(false); setCurrentId(null);
     setTitle(""); setDescription(""); setImageUrls([]); setGithubUrl(""); setLiveUrl(""); setProjectType("project");
     setRole(""); setCompany(""); setDuration(""); setExpDescription("");
     setCertName(""); setCertUrl("");
@@ -259,205 +368,294 @@ export default function AdminPage() {
 
         {/* Main Content */}
         <main className="flex-1 p-10 overflow-y-auto max-w-6xl mx-auto">
-          <div className="flex justify-between items-end mb-12">
+          <div className="flex justify-between items-center mb-10 pb-6 border-b border-white/5">
             <div>
-              <h1 className="text-4xl font-bold text-white mb-2 capitalize">{activeTab}</h1>
-              <p className="text-slate-500 text-sm">System configuration / {activeTab}</p>
+              <h1 className="text-3xl font-bold text-white tracking-tight capitalize">{activeTab}</h1>
+              <p className="text-slate-500 text-xs mt-1">Manage your {activeTab} section content.</p>
             </div>
-            {activeTab !== "messages" && activeTab !== "profile" && !isEditing && (
-              <Button onClick={() => setIsEditing(true)} variant="primary" className="bg-white text-black hover:bg-slate-200 px-6 h-11 flex items-center gap-2 rounded-xl">
-                <FaPlus size={14} /> New Record
-              </Button>
+            {activeTab !== "messages" && activeTab !== "profile" && !isEditing && !isAdding && (
+              <button 
+                onClick={() => { resetForm(); setIsAdding(true); }} 
+                className="bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold px-5 py-2.5 rounded-xl transition-all flex items-center gap-2 text-sm shadow-[0_10px_30px_rgba(14,165,233,0.3)]"
+              >
+                <FaPlus size={12} /> Add New
+              </button>
             )}
           </div>
 
-          <div className="grid lg:grid-cols-2 gap-10">
-            {/* Form Column */}
-            <div className={isEditing || activeTab === "profile" ? "block" : "hidden lg:block lg:opacity-30 pointer-events-none"}>
-              <div className="bg-slate-900/50 border border-slate-800 p-8 rounded-[2rem] shadow-2xl backdrop-blur-xl">
-                <div className="flex items-center gap-2 mb-8 text-xs font-mono text-sky-400 uppercase tracking-widest">
-                  <div className="w-2 h-2 rounded-full bg-sky-500 animate-pulse" />
-                  Editor Active
+          <div className="space-y-8">
+            {/* Editor Phase */}
+            {(isEditing || isAdding || activeTab === "profile") && (
+              <div className="bg-slate-900/40 border border-white/5 p-8 rounded-3xl backdrop-blur-sm">
+                <div className="flex items-center justify-between mb-8">
+                  <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-sky-500" />
+                    {isEditing ? "Edit Entry" : "Creation Terminal"}
+                  </h2>
                 </div>
 
-                <form onSubmit={handleSubmit} className="space-y-6">
+                <form onSubmit={handleSubmit} className="space-y-6 max-w-4xl">
                   {activeTab === "projects" && (
-                    <>
-                      <input type="text" required value={title} onChange={e => setTitle(e.target.value)} className="saas-input" placeholder="Project Name" />
-                      <textarea required rows={4} value={description} onChange={e => setDescription(e.target.value)} className="saas-input" placeholder="Technical system overview..." />
-                      <div className="grid grid-cols-2 gap-4">
+                    <div className="grid md:grid-cols-2 gap-8">
+                      <div className="space-y-4">
+                        <label className="admin-label">Basic Info</label>
+                        <input type="text" required value={title} onChange={e => setTitle(e.target.value)} className="saas-input" placeholder="Project Name" />
                         <select value={projectType} onChange={e => setProjectType(e.target.value)} className="saas-input">
                           <option value="project">Project</option>
                           <option value="writeup">Writeup</option>
                         </select>
                         <input type="url" value={githubUrl} onChange={e => setGithubUrl(e.target.value)} className="saas-input" placeholder="GitHub Repository URL" />
+                        <input type="url" value={liveUrl} onChange={e => setLiveUrl(e.target.value)} className="saas-input" placeholder="Live Demo URL" />
                       </div>
                       <div className="space-y-4">
-                        <label className="text-[10px] font-mono text-slate-500 uppercase tracking-widest">Technical Assets</label>
+                        <label className="admin-label">Description & Media</label>
+                        <textarea required rows={5} value={description} onChange={e => setDescription(e.target.value)} className="saas-input" placeholder="Technical overview..." />
                         <div className="grid grid-cols-3 gap-3">
                           {imageUrls.map((url, i) => (
-                            <div key={i} className="relative aspect-video rounded-xl bg-slate-800 border border-slate-700 overflow-hidden group">
+                            <div key={i} className="relative aspect-video rounded-xl bg-slate-800 border border-white/5 overflow-hidden group">
                               <img src={url} className="w-full h-full object-cover" />
                               <button type="button" onClick={() => setImageUrls(imageUrls.filter((_, idx) => idx !== i))} className="absolute inset-0 bg-red-500/80 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                                 <FaTrash size={14} className="text-white" />
                               </button>
                             </div>
                           ))}
-                          <button type="button" onClick={() => fileInputRef.current?.click()} className="aspect-video rounded-xl border-2 border-dashed border-slate-800 hover:border-sky-500/30 flex flex-col items-center justify-center text-slate-500 transition-all">
+                          <button type="button" onClick={() => fileInputRef.current?.click()} className="aspect-video rounded-xl border-2 border-dashed border-white/5 hover:border-sky-500/20 flex flex-col items-center justify-center text-slate-500 transition-all">
                             <FaPlus size={16} />
-                            <span className="text-[10px] mt-2">Upload</span>
                           </button>
                         </div>
                         <input type="file" ref={fileInputRef} className="hidden" multiple accept="image/*" onChange={async (e) => {
                           if (!e.target.files) return;
-                          const newUrls = [...imageUrls];
                           for (const file of Array.from(e.target.files)) {
                             const url = await handleFileUpload(file, "portfolio-assets", "projects");
-                            if (url) newUrls.push(url);
+                            if (url) setImageUrls(prev => [...prev, url]);
                           }
-                          setImageUrls(newUrls);
                         }} />
-                      </div>
-                    </>
-                  )}
-
-                  {activeTab === "experience" && (
-                    <>
-                      <input type="text" required value={role} onChange={e => setRole(e.target.value)} className="saas-input" placeholder="Role (e.g. Senior QA Engineer)" />
-                      <input type="text" required value={company} onChange={e => setCompany(e.target.value)} className="saas-input" placeholder="Company Name" />
-                      <input type="text" required value={duration} onChange={e => setDuration(e.target.value)} className="saas-input" placeholder="Duration (e.g. 2021 - Present)" />
-                      <textarea required rows={4} value={expDescription} onChange={e => setExpDescription(e.target.value)} className="saas-input" placeholder="Key achievements and technical stack..." />
-                    </>
-                  )}
-
-                  {activeTab === "certs" && (
-                    <>
-                      <input type="text" required value={certName} onChange={e => setCertName(e.target.value)} className="saas-input" placeholder="Certification Name" />
-                      <input type="url" value={certUrl} onChange={e => setCertUrl(e.target.value)} className="saas-input" placeholder="Credential URL" />
-                    </>
-                  )}
-
-                  {activeTab === "profile" && (
-                    <div className="space-y-6">
-                      <div className="flex items-center gap-6 mb-8">
-                        <div onClick={() => fileInputRef.current?.click()} className="w-24 h-24 rounded-3xl bg-slate-800 border-2 border-slate-700 shrink-0 cursor-pointer overflow-hidden relative group">
-                          {photoUrl ? <img src={photoUrl} className="w-full h-full object-cover" /> : <FaImage className="m-auto absolute inset-0 text-slate-600" size={24} />}
-                          <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity"><FaEdit size={16} /></div>
-                        </div>
-                        <div className="flex-1">
-                          <input type="text" required value={fullName} onChange={e => setFullName(e.target.value)} className="saas-input mb-3" placeholder="Full Name" />
-                          <div onClick={() => cvInputRef.current?.click()} className="px-4 py-2 border border-slate-800 rounded-lg text-xs text-slate-500 hover:bg-white/5 cursor-pointer transition-all flex items-center gap-2 w-fit">
-                            <FaFilePdf /> {cvUrl ? "Update CV" : "Upload CV"}
-                          </div>
-                          <input type="file" ref={cvInputRef} className="hidden" accept=".pdf" onChange={async e => {
-                            if (e.target.files?.[0]) {
-                              const url = await handleFileUpload(e.target.files[0], "portfolio-assets", "cvs");
-                              if (url) setCvUrl(url);
-                            }
-                          }} />
-                        </div>
-                      </div>
-                      <textarea rows={4} value={bio} onChange={e => setBio(e.target.value)} className="saas-input" placeholder="Professional Summary..." />
-                      <div className="space-y-4">
-                        <label className="text-[10px] font-mono text-slate-500 uppercase tracking-widest">Metadata Config</label>
-                        <input type="text" value={typingTerms} onChange={e => setTypingTerms(e.target.value)} className="saas-input" placeholder="Typewriter Phrases (comma-separated)" />
-                        <textarea rows={3} value={servicesData} onChange={e => setServicesData(e.target.value)} className="saas-input" placeholder="Services (Format: Title|Desc, Title|Desc...)" />
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <input type="url" value={profileGithub} onChange={e => setProfileGithub(e.target.value)} className="saas-input" placeholder="GitHub Profile URL" />
-                        <input type="url" value={profileLinkedin} onChange={e => setProfileLinkedin(e.target.value)} className="saas-input" placeholder="LinkedIn Profile URL" />
                       </div>
                     </div>
                   )}
 
-                  {/* Shared Logic for Experience/Certs can follow same clean style */}
+                  {activeTab === "experience" && (
+                    <div className="grid md:grid-cols-2 gap-8">
+                       <div className="space-y-4">
+                        <label className="admin-label">Position details</label>
+                        <input type="text" required value={role} onChange={e => setRole(e.target.value)} className="saas-input" placeholder="Role (e.g. Senior QA Engineer)" />
+                        <input type="text" required value={company} onChange={e => setCompany(e.target.value)} className="saas-input" placeholder="Company Name" />
+                        <input type="text" required value={duration} onChange={e => setDuration(e.target.value)} className="saas-input" placeholder="Duration (e.g. 2021 - Present)" />
+                      </div>
+                      <div className="space-y-4">
+                        <label className="admin-label">Responsibilities</label>
+                        <textarea required rows={7} value={expDescription} onChange={e => setExpDescription(e.target.value)} className="saas-input" placeholder="Key achievements..." />
+                      </div>
+                    </div>
+                  )}
 
-                  <div className="pt-4 flex gap-4">
-                    <button type="submit" disabled={isUploading} className="flex-1 h-12 bg-white text-black font-bold rounded-xl hover:bg-slate-200 transition-all shadow-[0_4px_20px_rgba(255,255,255,0.1)]">
-                      {isLoading ? "Saving..." : isEditing ? "Update Core" : "Commit Changes"}
+                  {activeTab === "certs" && (
+                    <div className="grid md:grid-cols-2 gap-8">
+                      <div className="space-y-4">
+                        <label className="admin-label">Certification Details</label>
+                        <input type="text" required value={certName} onChange={e => setCertName(e.target.value)} className="saas-input" placeholder="Certification Name" />
+                        <input type="url" value={certUrl} onChange={e => setCertUrl(e.target.value)} className="saas-input" placeholder="Credential URL" />
+                      </div>
+                    </div>
+                  )}
+
+                  {activeTab === "profile" && (
+                    <div className="space-y-10">
+                      <div className="flex flex-col md:flex-row gap-10">
+                        <div className="space-y-4">
+                          <label className="admin-label text-center block">Profile Avatar</label>
+                          <div onClick={() => fileInputRef.current?.click()} className="w-32 h-32 rounded-[2.5rem] bg-slate-950 border border-white/5 mx-auto shrink-0 cursor-pointer overflow-hidden relative group shadow-2xl">
+                            {photoUrl ? <img src={photoUrl} className="w-full h-full object-cover" /> : <FaImage className="m-auto absolute inset-0 text-slate-700" size={32} />}
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all backdrop-blur-sm"><FaEdit size={20} className="text-white" /></div>
+                          </div>
+                        </div>
+                        <div className="flex-1 space-y-4">
+                           <label className="admin-label">Primary Info</label>
+                           <input type="text" required value={fullName} onChange={e => setFullName(e.target.value)} className="saas-input" placeholder="Full Name" />
+                           <div className="flex gap-4">
+                             <div onClick={() => cvInputRef.current?.click()} className="flex-1 px-5 py-3 bg-slate-950 border border-white/5 rounded-xl text-xs text-slate-400 hover:text-white hover:bg-white/5 cursor-pointer transition-all flex items-center justify-center gap-2">
+                               <FaFilePdf size={14} /> {cvUrl ? "Update Resume" : "Upload Resume"}
+                             </div>
+                             <input type="file" ref={cvInputRef} className="hidden" accept=".pdf" onChange={async e => {
+                               if (e.target.files?.[0]) {
+                                  const file = e.target.files[0];
+                                  const fileExt = file.name.split('.').pop();
+                                  const safeBase = cvFilename ? cvFilename.replace(/[^a-zA-Z0-9._-]/g, '_') : 'cv_' + Date.now();
+                                  const fileName = safeBase.toLowerCase().endsWith('.' + fileExt) ? safeBase : safeBase + '.' + fileExt;
+                                  setIsUploading(true);
+                                  const { error: upErr } = await supabase.storage.from('portfolio-assets').upload('cvs/' + fileName, file, { upsert: true });
+                                  if (!upErr) {
+                                    const { data: { publicUrl } } = supabase.storage.from('portfolio-assets').getPublicUrl('cvs/' + fileName);
+                                    setCvUrl(publicUrl);
+                                  }
+                                  setIsUploading(false);
+                               }
+                             }} />
+                           </div>
+                        </div>
+                      </div>
+
+                      <div className="grid md:grid-cols-2 gap-10">
+                        <div className="space-y-4">
+                          <label className="admin-label">Biography & Socials</label>
+                          <textarea rows={5} value={bio} onChange={e => setBio(e.target.value)} className="saas-input" placeholder="Professional Summary..." />
+                          <div className="flex gap-3">
+                            <input type="url" value={profileGithub} onChange={e => setProfileGithub(e.target.value)} className="saas-input" placeholder="GitHub URL" />
+                            <input type="url" value={profileLinkedin} onChange={e => setProfileLinkedin(e.target.value)} className="saas-input" placeholder="LinkedIn URL" />
+                          </div>
+                        </div>
+                        <div className="space-y-4">
+                           <label className="admin-label">Chat & Interaction</label>
+                           <input type="text" value={typingTerms} onChange={e => setTypingTerms(e.target.value)} className="saas-input" placeholder="Hero Typewriter Keywords (comma-separated)" />
+                           <div className="grid grid-cols-2 gap-3">
+                              <input type="text" value={chatbotName} onChange={e => setChatbotName(e.target.value)} className="saas-input" placeholder="Chat Name" />
+                              <input type="text" value={chatbotSubtitle} onChange={e => setChatbotSubtitle(e.target.value)} className="saas-input" placeholder="Chat Subtitle" />
+                           </div>
+                           <input type="text" value={cvFilename} onChange={e => setCvFilename(e.target.value)} className="saas-input" placeholder="CV Filename (e.g. Paras_Oli_CV.pdf)" />
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-4 border-t border-white/5 pt-8">
+                        <label className="admin-label">AI Intelligence Context</label>
+                        <textarea rows={6} value={chatbotContext} onChange={e => setChatbotContext(e.target.value)} className="saas-input" placeholder="Tell the AI who you are and how it should represent you..." />
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex gap-3 pt-6">
+                    <button type="submit" disabled={isUploading || isLoading} className="h-12 px-10 bg-white text-black font-bold rounded-xl hover:bg-sky-400 transition-all shadow-[0_10px_40px_rgba(255,255,255,0.1)]">
+                      {isLoading ? "Saving..." : "Save Changes"}
                     </button>
-                    {isEditing && (
-                      <button type="button" onClick={resetForm} className="px-6 h-12 bg-slate-800 rounded-xl hover:bg-slate-700 transition-all font-medium">
-                        Cancel
+                    {(isEditing || isAdding) && (
+                      <button type="button" onClick={resetForm} className="h-12 px-8 bg-slate-800 text-slate-300 rounded-xl hover:bg-slate-700 transition-all font-medium">
+                        Dismiss
                       </button>
                     )}
                   </div>
                 </form>
               </div>
-            </div>
+            )}
 
-            {/* List Column */}
-            <div className={`space-y-4 ${activeTab === "profile" ? "hidden" : "block"}`}>
-              {activeTab === "projects" && projects.map(p => (
-                <div key={p.id} className="bg-slate-900 border border-slate-800 p-5 rounded-2xl flex items-center gap-6 group hover:border-sky-500/30 transition-all shadow-lg">
-                  <div className="w-20 h-20 rounded-xl bg-slate-800 overflow-hidden shrink-0 border border-slate-700/50">
-                    <img 
-                      src={p.image_url?.startsWith('[') ? JSON.parse(p.image_url)[0] : (p.image_url || "/placeholder.png")} 
-                      className="w-full h-full object-cover" 
-                    />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-bold text-white text-lg mb-1 truncate">{p.title}</p>
-                    <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">{p.description}</p>
-                  </div>
-                  <div className="flex gap-2">
-                    <button onClick={() => handleEdit(p)} className="w-10 h-10 flex items-center justify-center rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-all"><FaEdit size={14} /></button>
-                    <button onClick={() => handleDelete(p.id, "projects")} className="w-10 h-10 flex items-center justify-center rounded-lg bg-slate-800 hover:bg-red-500/10 text-slate-500 hover:text-red-400 transition-all border border-transparent hover:border-red-500/20"><FaTrash size={14} /></button>
-                  </div>
-                </div>
-              ))}
+            {/* List Phase */}
+            <div className={`space-y-6 ${activeTab === "profile" ? "hidden" : "block"}`}>
+              {activeTab === "projects" && (
+                <DragDropContext onDragEnd={(res) => handleOnDragEnd(res, "projects")}>
+                  <Droppable droppableId="projects">
+                    {(provided) => (
+                      <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-4">
+                        {projects.map((p, index) => (
+                          <Draggable key={p.id} draggableId={p.id.toString()} index={index}>
+                            {(provided) => (
+                              <div ref={provided.innerRef} {...provided.draggableProps} className="bg-slate-900/60 border border-white/5 p-4 rounded-2xl flex items-center gap-5 group hover:border-emerald-500/20 transition-all group shadow-sm">
+                                <div {...provided.dragHandleProps} className="text-slate-600 hover:text-slate-400 cursor-grab px-1">
+                                  <FaGripVertical size={14} />
+                                </div>
+                                <div className="w-14 h-14 rounded-xl bg-slate-950 overflow-hidden shrink-0 border border-white/5">
+                                  <img src={p.image_url?.startsWith('[') ? JSON.parse(p.image_url)[0] : (p.image_url || "/placeholder.png")} className="w-full h-full object-cover opacity-80" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-bold text-slate-200 text-sm truncate">{p.title}</p>
+                                  <p className="text-[11px] text-slate-500 truncate mt-0.5">{p.description}</p>
+                                </div>
+                                <div className="flex gap-1">
+                                  <button onClick={() => handleEdit(p)} className="p-2 text-slate-500 hover:text-white transition-colors"><FaEdit size={14} /></button>
+                                  <button onClick={() => handleDelete(p.id, "projects")} className="p-2 text-slate-500 hover:text-red-400 transition-colors"><FaTrash size={14} /></button>
+                                </div>
+                              </div>
+                            )}
+                          </Draggable>
+                        ))}
+                        {provided.placeholder}
+                      </div>
+                    )}
+                  </Droppable>
+                </DragDropContext>
+              )}
 
-              {activeTab === "experience" && experience.map(exp => (
-                <div key={exp.id} className="bg-slate-900 border border-slate-800 p-6 rounded-2xl group hover:border-sky-500/30 transition-all shadow-lg">
-                  <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <h3 className="font-bold text-white text-lg">{exp.role}</h3>
-                      <p className="text-sky-400 text-xs font-mono tracking-widest">{exp.company} • {exp.duration}</p>
-                    </div>
-                    <div className="flex gap-2">
-                      <button onClick={() => handleEdit(exp)} className="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 transition-all"><FaEdit size={12} /></button>
-                      <button onClick={() => handleDelete(exp.id, "experience")} className="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-800 hover:bg-red-500/10 text-slate-500 transition-all"><FaTrash size={12} /></button>
-                    </div>
-                  </div>
-                  <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">{exp.description}</p>
-                </div>
-              ))}
+              {activeTab === "experience" && (
+                <DragDropContext onDragEnd={(res) => handleOnDragEnd(res, "experience")}>
+                  <Droppable droppableId="experience">
+                    {(provided) => (
+                      <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-4">
+                        {experience.map((exp, index) => (
+                          <Draggable key={exp.id} draggableId={exp.id.toString()} index={index}>
+                            {(provided) => (
+                              <div ref={provided.innerRef} {...provided.draggableProps} className="bg-slate-900/60 border border-white/5 p-5 rounded-2xl transition-all group shadow-sm">
+                                <div className="flex items-center gap-4">
+                                  <div {...provided.dragHandleProps} className="text-slate-600 hover:text-slate-400 cursor-grab">
+                                    <FaGripVertical size={14} />
+                                  </div>
+                                  <div className="flex-1">
+                                    <h3 className="font-bold text-slate-200 text-sm">{exp.role}</h3>
+                                    <p className="text-[11px] text-sky-400 font-medium tracking-tight mt-0.5">{exp.company} • {exp.duration}</p>
+                                  </div>
+                                  <div className="flex gap-1">
+                                    <button onClick={() => handleEdit(exp)} className="p-2 text-slate-500 hover:text-white transition-colors"><FaEdit size={14} /></button>
+                                    <button onClick={() => handleDelete(exp.id, "experience")} className="p-2 text-slate-500 hover:text-red-400 transition-colors"><FaTrash size={14} /></button>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </Draggable>
+                        ))}
+                        {provided.placeholder}
+                      </div>
+                    )}
+                  </Droppable>
+                </DragDropContext>
+              )}
 
-              {activeTab === "certs" && certs.map(cert => (
-                <div key={cert.id} className="bg-slate-900 border border-slate-800 p-6 rounded-2xl flex items-center justify-between group hover:border-sky-500/30 transition-all shadow-lg">
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-lg bg-sky-500/10 flex items-center justify-center text-sky-400 border border-sky-500/20">
-                      <FaCertificate />
-                    </div>
-                    <div>
-                      <h3 className="font-bold text-white">{cert.name}</h3>
-                      <p className="text-[10px] text-slate-500 uppercase tracking-widest">ID: {cert.id.toString().slice(0,8)}</p>
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <button onClick={() => handleEdit(cert)} className="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 transition-all"><FaEdit size={12} /></button>
-                    <button onClick={() => handleDelete(cert.id, "certifications")} className="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-800 hover:bg-red-500/10 text-slate-500 transition-all"><FaTrash size={12} /></button>
-                  </div>
-                </div>
-              ))}
+              {activeTab === "certs" && (
+                <DragDropContext onDragEnd={(res) => handleOnDragEnd(res, "certs")}>
+                  <Droppable droppableId="certs">
+                    {(provided) => (
+                      <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-4">
+                        {certs.map((cert, index) => (
+                          <Draggable key={cert.id} draggableId={cert.id.toString()} index={index}>
+                            {(provided) => (
+                              <div ref={provided.innerRef} {...provided.draggableProps} className="bg-slate-900/60 border border-white/5 p-4 rounded-2xl flex items-center justify-between transition-all group shadow-sm">
+                                <div className="flex items-center gap-4">
+                                  <div {...provided.dragHandleProps} className="text-slate-600 hover:text-slate-400 cursor-grab">
+                                    <FaGripVertical size={14} />
+                                  </div>
+                                  <div className="w-9 h-9 rounded-lg bg-sky-500/5 flex items-center justify-center text-sky-500/50 border border-white/5">
+                                    <FaCertificate size={14} />
+                                  </div>
+                                  <div>
+                                    <h3 className="font-bold text-slate-200 text-sm">{cert.name}</h3>
+                                    <p className="text-[10px] text-slate-600 uppercase tracking-widest mt-0.5">Verified Credential</p>
+                                  </div>
+                                </div>
+                                <div className="flex gap-1">
+                                  <button onClick={() => handleEdit(cert)} className="p-2 text-slate-500 hover:text-white transition-colors"><FaEdit size={14} /></button>
+                                  <button onClick={() => handleDelete(cert.id, "certifications")} className="p-2 text-slate-500 hover:text-red-400 transition-colors"><FaTrash size={14} /></button>
+                                </div>
+                              </div>
+                            )}
+                          </Draggable>
+                        ))}
+                        {provided.placeholder}
+                      </div>
+                    )}
+                  </Droppable>
+                </DragDropContext>
+              )}
 
               {activeTab === "messages" && messages.map(m => (
-                <div key={m.id} className={`bg-slate-900 border border-slate-800 p-6 rounded-2xl transition-all ${!m.is_read ? 'border-sky-500/30 bg-sky-500/[0.02]' : 'opacity-60 grayscale-[0.5]'}`}>
+                <div key={m.id} className={`bg-slate-920 border border-white/5 p-6 rounded-2xl transition-all ${!m.is_read ? 'border-sky-500/20 shadow-lg' : 'opacity-40'}`}>
                   <div className="flex justify-between items-start mb-4">
                     <div className="flex gap-4">
-                      <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center text-slate-400 font-bold border border-slate-700">{m.name[0]}</div>
+                      <div className="w-10 h-10 rounded-full bg-slate-950 flex items-center justify-center text-slate-600 font-bold border border-white/5">{m.name[0]}</div>
                       <div>
-                        <p className="font-bold text-white">{m.name}</p>
-                        <p className="text-[10px] text-slate-500 uppercase tracking-widest">{m.email} • {new Date(m.created_at).toLocaleDateString()}</p>
+                        <p className="font-bold text-slate-200">{m.name}</p>
+                        <p className="text-[10px] text-slate-600 uppercase tracking-widest mt-1">{m.email} • {new Date(m.created_at).toLocaleDateString()}</p>
                       </div>
                     </div>
-                    <button onClick={() => handleDelete(m.id, "messages")} className="text-slate-600 hover:text-red-400 transition-colors"><FaTrash size={14} /></button>
+                    <button onClick={() => handleDelete(m.id, "messages")} className="text-slate-700 hover:text-red-400 transition-colors"><FaTrash size={14} /></button>
                   </div>
-                  <p className="text-sm text-slate-300 leading-relaxed font-light pl-14">{m.message}</p>
+                  <p className="text-sm text-slate-400 leading-relaxed font-light pl-14">{m.message}</p>
                 </div>
               ))}
-              
-              {/* Other lists (Experience/Certs) can use similar clean cards */}
             </div>
           </div>
         </main>
@@ -465,9 +663,12 @@ export default function AdminPage() {
 
       <style jsx>{`
         .saas-input { 
-          @apply w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-slate-200 
-                 placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-sky-500/20 
-                 focus:border-sky-500/50 transition-all text-sm font-sans shadow-inner; 
+          @apply w-full bg-slate-950/50 border border-white/5 rounded-xl px-4 py-3 text-slate-200 
+                 placeholder:text-slate-700 focus:outline-none focus:ring-1 focus:ring-sky-500/20 
+                 focus:border-sky-500/30 transition-all text-sm font-sans; 
+        }
+        .admin-label {
+          @apply text-[10px] font-mono text-slate-600 uppercase tracking-[0.2em] mb-2 block;
         }
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }

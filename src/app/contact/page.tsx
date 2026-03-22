@@ -4,9 +4,13 @@ import { useState } from "react";
 import PageTransition from "@/components/PageTransition";
 import Button from "@/components/Button";
 import { FaGithub, FaLinkedin, FaEnvelope, FaCheckCircle } from "react-icons/fa";
+import { useProfile } from "@/context/ProfileContext";
+import { parseBio } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
 
 export default function Contact() {
+  const { profile } = useProfile();
+  const { email } = parseBio(profile?.bio || "");
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -122,15 +126,21 @@ export default function Contact() {
         </div>
 
         <div className="mt-16 flex justify-center gap-8 text-white/50">
-          <a href="mailto:hello@example.com" className="hover:text-white transition-colors duration-300">
-            <FaEnvelope size={24} />
-          </a>
-          <a href="https://github.com" target="_blank" rel="noreferrer" className="hover:text-white transition-colors duration-300">
-            <FaGithub size={24} />
-          </a>
-          <a href="https://linkedin.com" target="_blank" rel="noreferrer" className="hover:text-white transition-colors duration-300">
-            <FaLinkedin size={24} />
-          </a>
+          {email && (
+            <a href={`mailto:${email}`} className="hover:text-white transition-colors duration-300">
+              <FaEnvelope size={24} />
+            </a>
+          )}
+          {profile?.github_url && (
+            <a href={profile.github_url} target="_blank" rel="noreferrer" className="hover:text-white transition-colors duration-300">
+              <FaGithub size={24} />
+            </a>
+          )}
+          {profile?.linkedin_url && (
+            <a href={profile.linkedin_url} target="_blank" rel="noreferrer" className="hover:text-white transition-colors duration-300">
+              <FaLinkedin size={24} />
+            </a>
+          )}
         </div>
       </div>
     </PageTransition>

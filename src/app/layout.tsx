@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
 import "./globals.css";
+import { ProfileProvider } from "@/context/ProfileContext";
+import AppWrapper from "@/components/AppWrapper";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -19,10 +19,6 @@ export const metadata: Metadata = {
   description: "Modern portfolio showcasing QA Automation expertise, projects, and skills.",
 };
 
-import { ProfileProvider } from "@/context/ProfileContext";
-
-import CustomCursor from "@/components/CustomCursor";
-
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -35,11 +31,9 @@ export default function RootLayout({
         suppressHydrationWarning
       >
         <ProfileProvider>
-          <Navbar />
-          <main className="flex-grow pt-20">
+          <AppWrapper>
             {children}
-          </main>
-          <Footer />
+          </AppWrapper>
         </ProfileProvider>
       </body>
     </html>

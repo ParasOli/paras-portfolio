@@ -21,6 +21,7 @@ export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const { profile, isLoading } = useProfile();
+  const [imageLoaded, setImageLoaded] = useState(false);
   const profilePhoto = profile?.photo_url;
 
   useEffect(() => {
@@ -36,8 +37,8 @@ export default function Navbar() {
       <nav
         className={`max-w-4xl mx-auto h-16 flex items-center justify-between px-8 rounded-full transition-all duration-700 pointer-events-auto relative mt-4 md:mt-6 ${
           scrolled 
-            ? "glass shadow-[0_20px_50px_rgba(0,0,0,0.5)] border-white/10 scale-[0.98]" 
-            : "bg-white/5 border border-white/5 shadow-lg"
+            ? "bg-slate-900/90 backdrop-blur-xl shadow-[0_20px_50px_rgba(0,0,0,0.7)] border-white/10 scale-[0.98]" 
+            : "bg-white/5 border border-white/5 shadow-lg backdrop-blur-md"
         }`}
       >
         <div className="scanner-line opacity-[0.1] rounded-full" />
@@ -49,9 +50,21 @@ export default function Navbar() {
             transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
             className="w-10 h-10 bg-slate-900 border border-sky-500/30 flex items-center justify-center transition-colors overflow-hidden shrink-0 shadow-[0_0_15px_rgba(14,165,233,0.2)]"
           >
-            {profilePhoto && !isLoading ? (
+            {profilePhoto ? (
               <div className="w-full h-full relative">
-                <Image src={profilePhoto} alt="P" width={40} height={40} className="object-cover w-full h-full scale-110" quality={80} />
+                <div className={`absolute inset-0 bg-slate-800 flex items-center justify-center animate-pulse transition-opacity duration-500 ${imageLoaded ? 'opacity-0' : 'opacity-100'}`}>
+                  <span className="text-xs font-bold text-sky-400 font-mono">P</span>
+                </div>
+                <Image 
+                  src={profilePhoto} 
+                  alt="P" 
+                  width={40} 
+                  height={40} 
+                  className={`object-cover w-full h-full scale-110 transition-opacity duration-700 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`} 
+                  onLoad={() => setImageLoaded(true)}
+                  quality={90} 
+                  priority
+                />
               </div>
             ) : (
               <div className="w-full h-full bg-slate-800 flex items-center justify-center animate-pulse">
@@ -59,6 +72,7 @@ export default function Navbar() {
               </div>
             )}
           </motion.div>
+
           <span className="text-white font-bold tracking-tight">Paras<span className="text-slate-500">Oli</span></span>
         </Link>
         
