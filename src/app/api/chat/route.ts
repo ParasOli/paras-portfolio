@@ -1,15 +1,14 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { supabase } from "@/lib/supabase";
 import { NextResponse } from "next/server";
 
 export async function POST(req: Request) {
   try {
     const { messages } = await req.json();
-    const apiKey = process.env.GEMINI_API_KEY;
+    const apiKey = process.env.GROQ_API_KEY;
 
     if (!apiKey) {
       return NextResponse.json(
-        { error: "Gemini API Key not configured. Please add GEMINI_API_KEY to your .env.local" },
+        { error: "Groq API Key not configured. Please add GROQ_API_KEY to your .env.local" },
         { status: 500 }
       );
     }
@@ -21,11 +20,6 @@ export async function POST(req: Request) {
       supabase.from("certifications").select("*").order("created_at", { ascending: false }),
       supabase.from("projects").select("*").order("created_at", { ascending: false })
     ]);
-
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ 
-      model: "gemini-flash-latest",
-    });
 
     const chatMatch = profile?.bio?.match(/\[chat:(.*?)\]/);
     const customContext = chatMatch ? chatMatch[1] : "";
@@ -53,20 +47,37 @@ export async function POST(req: Request) {
       - DO NOT use markdown bolding (e.g., no **text**). Use plain text only.
     `;
 
-    const lastMessage = messages[messages.length - 1].content;
-    const history = [
-      { role: "user", parts: [{ text: systemPrompt }] },
-      { role: "model", parts: [{ text: "Understood. I am now configured as your professional portfolio assistant. I will respond briefly and accurately based on your CV data." }] },
-      ...messages.slice(0, -1).map((m: any) => ({
-        role: m.role === "user" ? "user" : "model",
-        parts: [{ text: m.content }]
+    // Map history to OpenAI format (supported by Groq)
+    const groqMessages = [
+      { role: "system", content: systemPrompt.trim() },
+      ...messages.map((m: any) => ({
+        role: m.role === "ai" ? "assistant" : "user",
+        content: m.content
       }))
     ];
 
-    const chat = model.startChat({ history });
-    const result = await chat.sendMessage(lastMessage);
-    const response = await result.response;
-    const text = response.text();
+    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model: "llama-3.3-70b-versatile", // Using a stable, fast llama model
+        messages: groqMessages,
+        temperature: 0.7,
+        max_tokens: 1024,
+      })
+    });
+
+    const data = await response.json();
+
+    if (data.error) {
+      console.error("Groq API Error Detail:", data.error);
+      throw new Error(data.error.message || "Failed to fetch from Groq");
+    }
+
+    const text = data.choices[0].message.content;
 
     return NextResponse.json({ text });
   } catch (error: any) {

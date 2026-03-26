@@ -72,25 +72,31 @@ export default function Projects() {
           </p>
 
           {/* Filter System */}
-          <div className="flex items-center justify-center gap-2 p-1.5 bg-slate-900 border border-white/5 rounded-2xl w-fit mx-auto mb-20 shadow-xl">
-            {[
-              { id: "all", label: "All Projects" },
-              { id: "project", label: "Frameworks" },
-              { id: "writeup", label: "Case Studies" }
-            ].map((cat) => (
-              <button
-                key={cat.id}
-                onClick={() => setFilter(cat.id as any)}
-                className={`px-8 py-2.5 rounded-xl text-[10px] font-bold tracking-widest uppercase transition-all relative ${
-                  filter === cat.id ? "text-white" : "text-slate-500 hover:text-white"
-                }`}
-              >
-                {filter === cat.id && (
-                  <motion.div layoutId="filter-bg" className="absolute inset-0 bg-white/10 rounded-xl -z-10 border border-white/10 shadow-lg" />
-                )}
-                {cat.label}
-              </button>
-            ))}
+          <div className="w-full flex justify-center mb-20 relative z-10">
+            <div className="flex flex-wrap items-center justify-center gap-1 p-1 bg-slate-900 border border-white/10 rounded-2xl shadow-2xl">
+              {[
+                { id: "all", label: "All Projects" },
+                { id: "project", label: "Frameworks" },
+                { id: "writeup", label: "Case Studies" }
+              ].map((cat) => (
+                <button
+                  key={cat.id}
+                  onClick={() => setFilter(cat.id as any)}
+                  className={`px-4 md:px-8 py-2.5 rounded-xl text-[8px] md:text-[10px] font-bold tracking-widest uppercase transition-all relative whitespace-nowrap ${
+                    filter === cat.id ? "text-white" : "text-slate-500 hover:text-white"
+                  }`}
+                >
+                  {filter === cat.id && (
+                    <motion.div 
+                      layoutId="filter-bg" 
+                      className="absolute inset-0 bg-white/10 rounded-xl -z-10 border border-white/10 shadow-lg"
+                      transition={{ type: "spring", stiffness: 350, damping: 30 }}
+                    />
+                  )}
+                  {cat.label}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 

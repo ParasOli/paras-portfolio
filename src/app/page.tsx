@@ -59,8 +59,8 @@ export default function Home() {
                 />
               </div>
 
-              <p className="text-lg md:text-xl text-slate-500 max-w-xl leading-relaxed font-light">
-                {cleanBio || "Architecting digital resilience through high-precision testing frameworks and autonomous quality systems."}
+              <p className="text-base text-slate-500 max-w-xl leading-relaxed font-light">
+                {cleanBio || "I’m a Full-Stack QA Engineer specializing in UI automation (Cypress), API testing (Postman), and CI/CD integration for reliable releases. I also perform security testing to catch vulnerabilities early. I’ve built solutions like Slack-integrated AI agents for automated testing and reporting, improving efficiency and quality. My goal is to help teams release confidently with less manual effort."}
               </p>
             </div>
 

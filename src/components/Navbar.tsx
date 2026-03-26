@@ -117,7 +117,7 @@ export default function Navbar() {
             initial={{ opacity: 0, scale: 0.95, y: -20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: -20 }}
-            className="md:hidden mt-4 max-w-sm mx-auto glass rounded-3xl overflow-hidden pointer-events-auto shadow-2xl border-white/10"
+            className="md:hidden mt-4 max-w-sm mx-auto bg-slate-900/95 backdrop-blur-2xl rounded-3xl overflow-hidden pointer-events-auto shadow-2xl border border-white/10"
           >
             <div className="flex flex-col p-4 gap-1">
               {links.map((link) => (

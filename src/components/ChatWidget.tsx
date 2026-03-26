@@ -25,16 +25,42 @@ export default function ChatWidget() {
   const chatSub = chatSubMatch ? chatSubMatch[1] : "Expert System v1.1";
 
   const [isOpen, setIsOpen] = useState(false);
-  const [showTeaser, setShowTeaser] = useState(true);
+  const [showTeaser, setShowTeaser] = useState(false);
+  const [hasDismissedTeaser, setHasDismissedTeaser] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     { role: "ai", content: `Hi! I'm ${chatName}. How can I help you today?` }
   ]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  // No more automatic hide for teaser - let it stay until interaction or close
   
+  useEffect(() => {
+    if (hasDismissedTeaser || isOpen) {
+      setShowTeaser(false);
+      return;
+    }
+
+    const showInterval = setInterval(() => {
+      setShowTeaser(true);
+      setTimeout(() => {
+        setShowTeaser(false);
+      }, 7000); // show for 7 seconds
+    }, 30000); // every 30 seconds, show for 7 seconds
+
+    // Initial show
+    const initialShow = setTimeout(() => {
+      if (!hasDismissedTeaser && !isOpen) {
+        setShowTeaser(true);
+        setTimeout(() => setShowTeaser(false), 7000);
+      }
+    }, 5000);
+
+    return () => {
+      clearInterval(showInterval);
+      clearTimeout(initialShow);
+    };
+  }, [hasDismissedTeaser, isOpen]);
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
@@ -52,6 +78,7 @@ export default function ChatWidget() {
     setMessages(prev => [...prev, { role: "user", content: userMsg }]);
     setIsLoading(true);
     setShowTeaser(false);
+    setHasDismissedTeaser(true);
 
     try {
       const res = await fetch("/api/chat", {
@@ -82,13 +109,26 @@ export default function ChatWidget() {
           <motion.div
             initial={{ opacity: 0, scale: 0.5, y: 20, x: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0, x: 0 }}
-            exit={{ opacity: 0, scale: 0.5, y: 20, x: 20 }}
-            className="absolute bottom-16 right-0 sm:bottom-20 sm:right-4 z-[10000] bg-white text-slate-900 px-4 py-2 sm:px-5 sm:py-2.5 rounded-2xl rounded-br-none shadow-2xl border border-sky-100 flex items-center gap-2 sm:gap-3 cursor-pointer group"
-            onClick={() => setIsOpen(true)}
+            exit={{ opacity: 0, scale: 0.8, y: 10, x: 10, filter: "blur(4px)" }}
+            transition={{ type: "spring", stiffness: 260, damping: 20 }}
+            className="absolute bottom-16 right-0 sm:bottom-20 sm:right-4 z-[10000] bg-white text-slate-900 px-4 py-2 sm:px-5 sm:py-2.5 rounded-2xl rounded-br-none shadow-2xl border border-sky-100 flex items-center gap-2 sm:gap-3 group"
           >
-            <div className="w-1.5 h-1.5 bg-sky-500 rounded-full animate-ping" />
-            <p className="text-[10px] sm:text-xs font-bold whitespace-nowrap">Hi! Need help with QA or projects?</p>
-            <div className="absolute -bottom-2 right-0 w-3 h-3 bg-white rotate-45" />
+            <div 
+              className="flex items-center gap-2 sm:gap-3 cursor-pointer"
+              onClick={() => { setIsOpen(true); setHasDismissedTeaser(true); }}
+            >
+              <div className="w-2 h-2 bg-sky-500 rounded-full animate-ping relative">
+                <div className="absolute inset-0 bg-sky-500 rounded-full animate-pulse" />
+              </div>
+              <p className="text-[10px] sm:text-xs font-bold whitespace-nowrap bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">Hi! Need help with QA or projects?</p>
+            </div>
+            <button 
+              onClick={(e) => { e.stopPropagation(); setShowTeaser(false); setHasDismissedTeaser(true); }}
+              className="ml-1 md:ml-2 p-1 text-slate-300 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-all"
+            >
+              <FaTimes size={10} />
+            </button>
+            <div className="absolute -bottom-2 right-0 w-3 h-3 bg-white rotate-45 border-r border-b border-sky-100" />
           </motion.div>
         )}
       </AnimatePresence>
@@ -98,22 +138,39 @@ export default function ChatWidget() {
         onClick={() => {
           setIsOpen(!isOpen);
           setShowTeaser(false);
+          setHasDismissedTeaser(true);
         }}
-        initial={{ y: 0 }}
+        initial={{ y: 0, rotate: 0 }}
         animate={{ 
-          y: [0, -10, 0],
+          y: [0, -12, 0],
+          boxShadow: [
+            "0px 10px 40px rgba(14,165,233,0.4)",
+            "0px 20px 50px rgba(14,165,233,0.6)",
+            "0px 10px 40px rgba(14,165,233,0.4)",
+          ]
         }}
         transition={{ 
-          duration: 3, 
+          duration: 4, 
           repeat: Infinity, 
           ease: "easeInOut" 
         }}
-        whileHover={{ scale: 1.05, y: -5 }}
-        whileTap={{ scale: 0.95 }}
-        className="w-14 h-14 sm:w-16 sm:h-16 bg-sky-500 text-white rounded-full shadow-[0_10px_40px_rgba(14,165,233,0.4)] flex items-center justify-center border-2 border-white/20 hover:bg-sky-400 transition-all group relative overflow-hidden"
+        whileHover={{ scale: 1.05, y: -5, rotate: 5 }}
+        whileTap={{ scale: 0.95, rotate: -5 }}
+        className="w-14 h-14 sm:w-16 sm:h-16 bg-gradient-to-tr from-sky-500 to-sky-400 text-white rounded-full shadow-[0_10px_40px_rgba(14,165,233,0.4)] flex items-center justify-center border-[3px] border-white/30 hover:border-white/50 transition-all group relative overflow-hidden"
       >
-        <div className="absolute inset-0 rounded-full bg-sky-400 animate-pulse opacity-20 group-hover:opacity-40" />
-        {isOpen ? <FaTimes size={18} className="relative z-10 sm:size-20" /> : <FaRobot size={20} className="relative z-10 sm:size-24" />}
+        <div className="absolute inset-0 rounded-full bg-white/20 scale-0 group-hover:scale-150 transition-transform duration-500 ease-out" />
+        <div className="absolute inset-0 rounded-full bg-sky-400 animate-pulse opacity-20 group-hover:opacity-0 transition-opacity" />
+        
+        {/* Glow behind icon */}
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="w-8 h-8 bg-white/30 blur-md rounded-full" />
+        </div>
+
+        {isOpen ? (
+          <FaTimes size={18} className="relative z-10 sm:size-20 transform group-hover:rotate-90 transition-transform duration-300" />
+        ) : (
+          <FaRobot size={20} className="relative z-10 sm:size-24 transform group-hover:-translate-y-1 transition-transform duration-300 drop-shadow-md" />
+        )}
       </motion.button>
 
       {/* Chat Window */}

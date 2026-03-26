@@ -118,8 +118,8 @@ export default function About() {
                 <div className="h-6 bg-white/5 rounded-xl w-4/6" />
               </div>
             ) : (
-              <p className="text-xl md:text-2xl text-white font-light !leading-relaxed">
-                {cleanBio}
+              <p className="text-base text-slate-300 font-light !leading-relaxed">
+                {cleanBio || "I’m a Full-Stack QA Engineer specializing in UI automation (Cypress), API testing (Postman), and CI/CD integration for reliable releases. I also perform security testing to catch vulnerabilities early. I’ve built solutions like Slack-integrated AI agents for automated testing and reporting, improving efficiency and quality. My goal is to help teams release confidently with less manual effort."}
               </p>
             )}
             
