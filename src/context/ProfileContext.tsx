@@ -32,7 +32,7 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
         .select("photo_url, cv_url, full_name, bio, github_url, linkedin_url")
         .limit(1)
         .single();
-      
+
       if (data) {
         setProfile(data);
       }

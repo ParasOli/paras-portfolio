@@ -3,7 +3,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import Image from "next/image";
 import { useProfile } from "@/context/ProfileContext";
@@ -19,21 +19,49 @@ export default function Navbar() {
   const pathname = usePathname();
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const navRef = useRef<HTMLElement>(null);
 
   const { profile, isLoading } = useProfile();
   const [imageLoaded, setImageLoaded] = useState(false);
   const profilePhoto = profile?.photo_url;
 
+  // Close mobile menu when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (navRef.current && !navRef.current.contains(event.target as Node)) {
+        setMobileMenuOpen(false);
+      }
+    }
+
+    if (mobileMenuOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    } else {
+      document.removeEventListener("mousedown", handleClickOutside);
+    }
+    
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [mobileMenuOpen]);
+
   useEffect(() => {
     const handleScroll = () => {
       setScrolled(window.scrollY > 50);
+      if (window.scrollY > 100) {
+        setMobileMenuOpen(false);
+      }
     };
-    window.addEventListener("scroll", handleScroll);
+    window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  // Close mobile menu on route change
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [pathname]);
+
   return (
-    <header className="fixed top-0 w-full z-50 px-6 py-6 pointer-events-none">
+    <header ref={navRef} className="fixed top-0 w-full z-50 px-6 py-6 pointer-events-none">
       <nav
         className={`max-w-4xl mx-auto h-16 flex items-center justify-between px-8 rounded-full transition-all duration-700 pointer-events-auto relative mt-4 md:mt-6 ${
           scrolled 

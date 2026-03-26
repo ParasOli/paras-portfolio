@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { FaRobot, FaTimes, FaPaperPlane, FaUser } from "react-icons/fa";
+import { FaRobot, FaTimes, FaPaperPlane, FaTrash } from "react-icons/fa";
 import { usePathname } from "next/navigation";
 import { useProfile } from "@/context/ProfileContext";
 
@@ -11,242 +11,260 @@ interface Message {
   content: string;
 }
 
+const SUGGESTED = [
+  "What tools do you use?",
+  "Show me your projects",
+  "Can I download your CV?",
+  "What's your experience?",
+];
+
+const STORAGE_KEY = "portfolio_chat_history";
+
 export default function ChatWidget() {
   const pathname = usePathname();
   const { profile } = useProfile();
   
-  // Hide on admin/login routes
-  if (pathname.startsWith("/admin") || pathname.startsWith("/login")) return null;
+  const [mounted, setMounted] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
+  const [showTeaser, setShowTeaser] = useState(false);
+  const [hasDismissedTeaser, setHasDismissedTeaser] = useState(false);
+  const [messages, setMessages] = useState<Message[]>([{ role: "ai", content: "Hi! How can I help you?" }]);
+  const [input, setInput] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Extract Branding from Bio
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const chatRef = useRef<HTMLDivElement>(null);
+  const scrollStartRef = useRef<number>(0);
+
   const chatNameMatch = profile?.bio?.match(/\[chat_name:(.*?)\]/);
   const chatSubMatch = profile?.bio?.match(/\[chat_sub:(.*?)\]/);
   const chatName = chatNameMatch ? chatNameMatch[1] : "Portfolio AI";
   const chatSub = chatSubMatch ? chatSubMatch[1] : "Expert System v1.1";
 
-  const [isOpen, setIsOpen] = useState(false);
-  const [showTeaser, setShowTeaser] = useState(false);
-  const [hasDismissedTeaser, setHasDismissedTeaser] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([
-    { role: "ai", content: `Hi! I'm ${chatName}. How can I help you today?` }
-  ]);
-  const [input, setInput] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  
+  // Initial load
   useEffect(() => {
-    if (hasDismissedTeaser || isOpen) {
-      setShowTeaser(false);
-      return;
-    }
-
-    const showInterval = setInterval(() => {
-      setShowTeaser(true);
-      setTimeout(() => {
-        setShowTeaser(false);
-      }, 7000); // show for 7 seconds
-    }, 30000); // every 30 seconds, show for 7 seconds
-
-    // Initial show
-    const initialShow = setTimeout(() => {
-      if (!hasDismissedTeaser && !isOpen) {
-        setShowTeaser(true);
-        setTimeout(() => setShowTeaser(false), 7000);
+    setMounted(true);
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        setMessages(JSON.parse(saved));
+      } else {
+        setMessages([{ role: "ai", content: `Hi! I'm ${chatName}. How can I help you today?` }]);
       }
-    }, 5000);
+    } catch {}
+  }, [chatName]);
 
+  // Persist
+  useEffect(() => {
+    if (!mounted) return;
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(messages)); } catch {}
+  }, [messages, mounted]);
+
+  // Close outside
+  useEffect(() => {
+    function handleOutside(e: MouseEvent | TouchEvent) {
+      if (!isOpen) return;
+      if (chatRef.current && !chatRef.current.contains(e.target as Node)) setIsOpen(false);
+    }
+    function handleScroll() {
+      if (!isOpen) return;
+      if (document.activeElement?.tagName === "INPUT" || document.activeElement?.tagName === "TEXTAREA") return;
+      if (Math.abs(window.scrollY - scrollStartRef.current) > 80) setIsOpen(false);
+    }
+    if (isOpen) {
+      scrollStartRef.current = window.scrollY;
+      document.addEventListener("mousedown", handleOutside);
+      document.addEventListener("touchstart", handleOutside);
+      window.addEventListener("scroll", handleScroll, { passive: true });
+    }
     return () => {
-      clearInterval(showInterval);
-      clearTimeout(initialShow);
+      document.removeEventListener("mousedown", handleOutside);
+      document.removeEventListener("touchstart", handleOutside);
+      window.removeEventListener("scroll", handleScroll);
     };
+  }, [isOpen]);
+
+  // Teaser
+  useEffect(() => {
+    if (hasDismissedTeaser || isOpen) { setShowTeaser(false); return; }
+    const t1 = setTimeout(() => { if (!hasDismissedTeaser && !isOpen) { setShowTeaser(true); setTimeout(() => setShowTeaser(false), 8000); } }, 5000);
+    const t2 = setInterval(() => { if (!hasDismissedTeaser && !isOpen) { setShowTeaser(true); setTimeout(() => setShowTeaser(false), 8000); } }, 35000);
+    return () => { clearTimeout(t1); clearInterval(t2); };
   }, [hasDismissedTeaser, isOpen]);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
+  // Auto-scroll
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+    if (isOpen) messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, isOpen]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!input.trim() || isLoading) return;
-
-    const userMsg = input.trim();
+  const sendMessage = async (text: string) => {
+    if (!text.trim() || isLoading) return;
+    const userMsg = text.trim();
     setInput("");
-    setMessages(prev => [...prev, { role: "user", content: userMsg }]);
+    const updated = [...messages, { role: "user" as const, content: userMsg }];
+    setMessages(updated);
     setIsLoading(true);
-    setShowTeaser(false);
-    setHasDismissedTeaser(true);
-
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          messages: [...messages, { role: "user", content: userMsg }] 
-        }),
+        body: JSON.stringify({ messages: updated }),
       });
-
       const data = await res.json();
       if (data.error) throw new Error(data.error);
-
       setMessages(prev => [...prev, { role: "ai", content: data.text }]);
-    } catch (error: any) {
-      setMessages(prev => [...prev, { role: "ai", content: "Sorry, I encountered an error. Please try again later." }]);
-      console.error("Chat Error:", error);
+    } catch {
+      setMessages(prev => [...prev, { role: "ai", content: "Sorry, I encountered an error." }]);
     } finally {
       setIsLoading(false);
     }
   };
 
+  const handleSubmit = (e: React.FormEvent) => { e.preventDefault(); sendMessage(input); };
+
+  const clearHistory = () => {
+    const fresh = [{ role: "ai" as const, content: `Hi! I'm ${chatName}. How can I help you today?` }];
+    setMessages(fresh);
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(fresh)); } catch {}
+  };
+
+  const showSuggestions = messages.length <= 1;
+
+  // CONDITIONAL RETURNS MUST BE AFTER ALL HOOKS
+  if (!mounted) return null;
+  if (pathname.startsWith("/admin") || pathname.startsWith("/login")) return null;
+
   return (
-    <div className="fixed bottom-4 right-4 sm:bottom-8 sm:right-8 z-[10000]">
-      {/* Teaser Popup */}
+    <div className="fixed bottom-6 right-6 sm:bottom-8 sm:right-8 z-[10000] flex flex-col items-end gap-3">
+      {/* Teaser bubble */}
       <AnimatePresence>
         {showTeaser && !isOpen && (
           <motion.div
-            initial={{ opacity: 0, scale: 0.5, y: 20, x: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0, x: 0 }}
-            exit={{ opacity: 0, scale: 0.8, y: 10, x: 10, filter: "blur(4px)" }}
-            transition={{ type: "spring", stiffness: 260, damping: 20 }}
-            className="absolute bottom-16 right-0 sm:bottom-20 sm:right-4 z-[10000] bg-white text-slate-900 px-4 py-2 sm:px-5 sm:py-2.5 rounded-2xl rounded-br-none shadow-2xl border border-sky-100 flex items-center gap-2 sm:gap-3 group"
+            initial={{ opacity: 0, y: 10, scale: 0.92 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 8, scale: 0.92 }}
+            transition={{ type: "spring", stiffness: 400, damping: 28 }}
+            className="relative bg-slate-900 border border-white/10 shadow-2xl rounded-2xl rounded-br-sm px-4 py-3 max-w-[220px] cursor-pointer"
+            onClick={() => setIsOpen(true)}
           >
-            <div 
-              className="flex items-center gap-2 sm:gap-3 cursor-pointer"
-              onClick={() => { setIsOpen(true); setHasDismissedTeaser(true); }}
-            >
-              <div className="w-2 h-2 bg-sky-500 rounded-full animate-ping relative">
-                <div className="absolute inset-0 bg-sky-500 rounded-full animate-pulse" />
-              </div>
-              <p className="text-[10px] sm:text-xs font-bold whitespace-nowrap bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">Hi! Need help with QA or projects?</p>
-            </div>
-            <button 
+            <TeaserText />
+            <button
               onClick={(e) => { e.stopPropagation(); setShowTeaser(false); setHasDismissedTeaser(true); }}
-              className="ml-1 md:ml-2 p-1 text-slate-300 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-all"
+              className="absolute -top-2 -right-2 w-5 h-5 bg-slate-700 hover:bg-slate-600 border border-white/10 rounded-full flex items-center justify-center text-slate-400 hover:text-white transition-all"
             >
-              <FaTimes size={10} />
+              <FaTimes size={8} />
             </button>
-            <div className="absolute -bottom-2 right-0 w-3 h-3 bg-white rotate-45 border-r border-b border-sky-100" />
+            <div className="absolute -bottom-1.5 right-5 w-3 h-3 bg-slate-900 border-r border-b border-white/10 rotate-45" />
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* FAB */}
-      <motion.button
-        onClick={() => {
-          setIsOpen(!isOpen);
-          setShowTeaser(false);
-          setHasDismissedTeaser(true);
-        }}
-        initial={{ y: 0, rotate: 0 }}
-        animate={{ 
-          y: [0, -12, 0],
-          boxShadow: [
-            "0px 10px 40px rgba(14,165,233,0.4)",
-            "0px 20px 50px rgba(14,165,233,0.6)",
-            "0px 10px 40px rgba(14,165,233,0.4)",
-          ]
-        }}
-        transition={{ 
-          duration: 4, 
-          repeat: Infinity, 
-          ease: "easeInOut" 
-        }}
-        whileHover={{ scale: 1.05, y: -5, rotate: 5 }}
-        whileTap={{ scale: 0.95, rotate: -5 }}
-        className="w-14 h-14 sm:w-16 sm:h-16 bg-gradient-to-tr from-sky-500 to-sky-400 text-white rounded-full shadow-[0_10px_40px_rgba(14,165,233,0.4)] flex items-center justify-center border-[3px] border-white/30 hover:border-white/50 transition-all group relative overflow-hidden"
-      >
-        <div className="absolute inset-0 rounded-full bg-white/20 scale-0 group-hover:scale-150 transition-transform duration-500 ease-out" />
-        <div className="absolute inset-0 rounded-full bg-sky-400 animate-pulse opacity-20 group-hover:opacity-0 transition-opacity" />
-        
-        {/* Glow behind icon */}
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="w-8 h-8 bg-white/30 blur-md rounded-full" />
-        </div>
-
-        {isOpen ? (
-          <FaTimes size={18} className="relative z-10 sm:size-20 transform group-hover:rotate-90 transition-transform duration-300" />
-        ) : (
-          <FaRobot size={20} className="relative z-10 sm:size-24 transform group-hover:-translate-y-1 transition-transform duration-300 drop-shadow-md" />
+      {/* Button with pulse ring */}
+      <div className="relative">
+        {!isOpen && (
+          <motion.div
+            className="absolute inset-0 rounded-full bg-sky-500/25"
+            animate={{ scale: [1, 1.8, 1], opacity: [0.4, 0, 0.4] }}
+            transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+          />
         )}
-      </motion.button>
+        <motion.button
+          onClick={() => setIsOpen(!isOpen)}
+          whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.93 }}
+          animate={isOpen ? {} : { y: [0, -6, 0] }}
+          transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut" }}
+          className="relative w-14 h-14 sm:w-16 sm:h-16 bg-gradient-to-tr from-sky-600 to-sky-400 text-white rounded-full shadow-xl flex items-center justify-center border-2 border-sky-300/30 overflow-hidden"
+        >
+          <AnimatePresence mode="wait">
+            {isOpen ? (
+              <motion.div key="x" initial={{ rotate: -90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: 90, opacity: 0 }} transition={{ duration: 0.2 }}>
+                <FaTimes size={18} />
+              </motion.div>
+            ) : (
+              <motion.div key="r" initial={{ rotate: 90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: -90, opacity: 0 }} transition={{ duration: 0.2 }}>
+                <FaRobot size={20} />
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.button>
+      </div>
 
-      {/* Chat Window */}
+      {/* Chat window */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            initial={{ opacity: 0, y: 20, scale: 0.95, x: 20 }}
-            animate={{ opacity: 1, y: 0, scale: 1, x: 0 }}
-            exit={{ opacity: 0, y: 20, scale: 0.95, x: 20 }}
-            className="fixed bottom-20 right-4 w-[calc(100vw-32px)] max-w-[340px] sm:absolute sm:bottom-20 sm:right-0 sm:w-[380px] h-[500px] sm:h-[550px] bg-slate-900/95 backdrop-blur-2xl border border-white/10 rounded-3xl sm:rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.5)] flex flex-col overflow-hidden origin-bottom-right"
+            ref={chatRef}
+            initial={{ opacity: 0, y: 16, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 16, scale: 0.95 }}
+            transition={{ type: "spring", stiffness: 380, damping: 30 }}
+            className="fixed bottom-24 right-4 sm:right-8 w-[calc(100vw-32px)] max-w-[340px] sm:max-w-[380px] h-[480px] sm:h-[560px] bg-slate-900/98 backdrop-blur-2xl border border-white/10 rounded-[2rem] shadow-2xl flex flex-col overflow-hidden"
           >
-            {/* Header */}
-            <div className="p-4 sm:p-5 bg-gradient-to-r from-sky-600 to-sky-400 text-white flex items-center justify-between">
+            <div className="p-4 bg-gradient-to-r from-sky-700 to-sky-500 text-white flex items-center justify-between shrink-0">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 sm:w-9 sm:h-9 bg-white/20 rounded-lg sm:rounded-xl flex items-center justify-center">
-                  <FaRobot size={16} className="sm:size-18" />
+                <div className="w-8 h-8 bg-white/20 rounded-xl flex items-center justify-center">
+                  <FaRobot size={15} />
                 </div>
                 <div>
-                  <h3 className="font-bold text-sm sm:text-base">{chatName}</h3>
-                  <p className="text-[8px] sm:text-[9px] text-white/70 uppercase tracking-widest font-mono">{chatSub}</p>
+                  <h3 className="font-bold text-sm">{chatName}</h3>
+                  <p className="text-[9px] text-white/60 uppercase tracking-[0.2em] font-mono">{chatSub}</p>
                 </div>
               </div>
-              <button 
-                onClick={() => setIsOpen(false)}
-                className="p-1.5 hover:bg-white/10 rounded-full transition-colors"
-                aria-label="Close Chat"
-              >
-                <FaTimes size={18} />
-              </button>
+              <div className="flex items-center gap-1">
+                <button onClick={clearHistory} title="Clear chat" className="p-1.5 hover:bg-white/20 rounded-lg transition-all"><FaTrash size={11} /></button>
+                <button onClick={() => setIsOpen(false)} className="p-1.5 hover:bg-white/20 rounded-lg transition-all"><FaTimes size={14} /></button>
+              </div>
             </div>
 
-            {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 sm:space-y-5 custom-scrollbar bg-slate-950/20">
+            <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
               {messages.map((m, i) => (
-                <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
-                  <div className={`max-w-[90%] sm:max-w-[85%] p-3 sm:p-4 rounded-xl sm:rounded-2xl text-[12px] sm:text-[13px] ${
-                    m.role === "user" 
-                      ? "bg-sky-500 text-white rounded-tr-none" 
-                      : "bg-slate-800 text-slate-200 rounded-tl-none border border-white/5"
+                <motion.div key={i} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}
+                  className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
+                >
+                  <div className={`max-w-[88%] px-3 py-2.5 rounded-2xl text-[12px] sm:text-[13px] leading-relaxed ${
+                    m.role === "user"
+                      ? "bg-sky-500 text-white rounded-br-sm"
+                      : "bg-slate-800 text-slate-200 border border-white/5 rounded-bl-sm"
                   }`}>
-                    <div className="flex items-center gap-2 mb-1 opacity-50">
-                      {m.role === "user" ? <FaUser size={8} /> : <FaRobot size={9} />}
-                      <span className="text-[9px] font-bold uppercase tracking-tight">{m.role === "user" ? "You" : "AI"}</span>
-                    </div>
                     {m.content}
                   </div>
-                </div>
+                </motion.div>
               ))}
               {isLoading && (
                 <div className="flex justify-start">
-                  <div className="bg-slate-800 p-3 rounded-xl rounded-tl-none border border-white/5 flex gap-1">
-                    <span className="w-1.5 h-1.5 bg-sky-500 rounded-full animate-bounce" />
-                    <span className="w-1.5 h-1.5 bg-sky-500 rounded-full animate-bounce [animation-delay:0.2s]" />
-                    <span className="w-1.5 h-1.5 bg-sky-500 rounded-full animate-bounce [animation-delay:0.4s]" />
+                  <div className="bg-slate-800 border border-white/5 px-4 py-3 rounded-2xl rounded-bl-sm flex gap-1.5">
+                    <span className="w-1.5 h-1.5 bg-sky-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                    <span className="w-1.5 h-1.5 bg-sky-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                    <span className="w-1.5 h-1.5 bg-sky-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
                   </div>
                 </div>
               )}
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Input */}
-            <form onSubmit={handleSubmit} className="p-4 sm:p-5 bg-slate-900 border-t border-white/5">
-              <div className="relative">
+            {showSuggestions && (
+              <div className="px-3 pb-2 flex gap-1.5 flex-wrap shrink-0">
+                {SUGGESTED.map(q => (
+                  <button key={q} onClick={() => sendMessage(q)}
+                    className="px-2.5 py-1 bg-slate-800/80 border border-white/5 hover:border-sky-500/40 hover:bg-sky-500/10 hover:text-sky-400 rounded-xl text-[10px] text-slate-400 transition-all"
+                  >
+                    {q}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <form onSubmit={handleSubmit} className="p-3 border-t border-white/5 shrink-0 bg-slate-950/40">
+              <div className="flex items-center gap-2">
                 <input
-                  type="text"
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
+                  type="text" value={input} onChange={e => setInput(e.target.value)}
                   placeholder="Ask me anything..."
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 pr-10 text-[12px] sm:text-[13px] text-slate-200 focus:outline-none focus:border-sky-500/50 transition-all font-sans"
+                  className="flex-1 bg-slate-900 border border-slate-800 focus:border-sky-500/40 rounded-2xl pl-4 py-2.5 text-sm text-slate-200 focus:outline-none transition-all placeholder:text-slate-600"
                 />
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-sky-500 hover:text-sky-400 disabled:opacity-30 p-2"
+                <button type="submit" disabled={isLoading || !input.trim()}
+                  className="w-9 h-9 bg-sky-500 disabled:bg-slate-700 hover:bg-sky-400 transition-all rounded-xl flex items-center justify-center text-white disabled:text-slate-500 shrink-0"
                 >
-                  <FaPaperPlane size={14} />
+                  <FaPaperPlane size={11} />
                 </button>
               </div>
             </form>
@@ -254,6 +272,32 @@ export default function ChatWidget() {
         )}
       </AnimatePresence>
     </div>
+  );
+}
 
+function TeaserText() {
+  const [phase, setPhase] = useState<"dots" | "text">("dots");
+  useEffect(() => {
+    const t = setTimeout(() => setPhase("text"), 1200);
+    return () => clearTimeout(t);
+  }, []);
+  return (
+    <AnimatePresence mode="wait">
+      {phase === "dots" ? (
+        <motion.div key="dots" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          className="flex gap-1 items-center h-5 px-1"
+        >
+          <span className="w-1.5 h-1.5 bg-sky-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+          <span className="w-1.5 h-1.5 bg-sky-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+          <span className="w-1.5 h-1.5 bg-sky-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+        </motion.div>
+      ) : (
+        <motion.p key="text" initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }}
+          className="text-xs text-slate-300 font-medium leading-snug"
+        >
+          👋 Need help with QA or want to know more about my work?
+        </motion.p>
+      )}
+    </AnimatePresence>
   );
 }

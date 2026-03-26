@@ -17,6 +17,7 @@ interface Project {
   github_url: string;
   live_url: string;
   type: string;
+  tools_used?: string;
 }
 
 export default function Projects() {
@@ -139,6 +140,7 @@ export default function Projects() {
                     }
                     githubUrl={project.github_url}
                     liveUrl={project.live_url}
+                    tools={project.tools_used ? project.tools_used.split(',').map(t => t.trim()).filter(Boolean) : []}
                   />
                 </motion.div>
               ))}

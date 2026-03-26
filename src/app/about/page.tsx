@@ -182,7 +182,7 @@ export default function About() {
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-px h-full bg-gradient-to-b from-white/10 via-white/5 to-transparent hidden lg:block" />
           
           <div className="flex flex-col">
-            <h2 className="text-3xl font-bold tracking-tight mb-14 text-white">Professional_Experience</h2>
+            <h2 className="text-3xl font-bold tracking-tight mb-14 text-white">Professional Experience</h2>
             <div className="space-y-12 flex-grow">
               {isLoading ? (
                 <div className="animate-pulse space-y-8">{[1,2].map(i => <div key={i} className="h-24 bg-white/5 rounded-2xl" />)}</div>
@@ -202,7 +202,7 @@ export default function About() {
           </div>
 
           <div className="flex flex-col">
-            <h2 className="text-3xl font-bold tracking-tight mb-14 text-white">Certified_Credentials</h2>
+            <h2 className="text-3xl font-bold tracking-tight mb-14 text-white">Certifications <span className="text-sky-500">&</span> Licenses</h2>
             <div className="flex flex-col gap-5 flex-grow">
               {isLoading ? (
                 <div className="animate-pulse space-y-4">{[1,2,3].map(i => <div key={i} className="h-16 bg-white/5 rounded-2xl" />)}</div>

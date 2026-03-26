@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import PageTransition from "@/components/PageTransition";
 import { supabase } from "@/lib/supabase";
+import CropModal from "@/components/CropModal";
 import { 
   FaPlus, FaTrash, FaEdit, FaSignOutAlt, FaImage, 
   FaEnvelope, FaUser, FaBriefcase, FaCertificate, 
@@ -38,12 +39,18 @@ export default function AdminPage() {
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const cvInputRef = useRef<HTMLInputElement>(null);
 
+  // Crop state
+  const [cropSrc, setCropSrc] = useState<string | null>(null);
+  const [cropTarget, setCropTarget] = useState<"avatar" | "project" | null>(null);
+  const [cropAspect, setCropAspect] = useState(1);
+
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [githubUrl, setGithubUrl] = useState("");
   const [liveUrl, setLiveUrl] = useState("");
   const [projectType, setProjectType] = useState("project");
+  const [toolsUsed, setToolsUsed] = useState("");
   
   const [role, setRole] = useState("");
   const [company, setCompany] = useState("");
@@ -164,19 +171,34 @@ export default function AdminPage() {
     setIsLoading(false);
   }
 
+  async function handleOnDragEnd(result: DropResult, type: "projects" | "experience" | "certs") {
+    if (!result.destination) return;
+    const items = type === "projects" ? [...projects] : type === "experience" ? [...experience] : [...certs];
+    const [reorderedItem] = items.splice(result.source.index, 1);
+    items.splice(result.destination.index, 0, reorderedItem as any);
+    const newOrderIds = items.map(i => i.id.toString());
+    if (type === "projects") { setProjects(items as Project[]); setOrderProjects(newOrderIds); }
+    else if (type === "experience") { setExperience(items as Experience[]); setOrderExperience(newOrderIds); }
+    else { setCerts(items as Certification[]); setOrderCerts(newOrderIds); }
+    if (profile) {
+      const meta = `[terms:${typingTerms}] [chat:${chatbotContext}] [chat_name:${chatbotName}] [chat_sub:${chatbotSubtitle}] [cv_file:${cvFilename}] [email:${typingEmail}] [order_projects:${type === "projects" ? newOrderIds.join(",") : orderProjects.join(",")}] [order_experience:${type === "experience" ? newOrderIds.join(",") : orderExperience.join(",")}] [order_certs:${type === "certs" ? newOrderIds.join(",") : orderCerts.join(",")}]`;
+      await supabase.from("profiles").update({ bio: `${bio} ${meta}` }).eq("id", profile.id);
+    }
+  }
+
   async function handleLogout() {
     await supabase.auth.signOut();
     router.push("/login");
   }
 
-  async function handleFileUpload(file: File, bucket: string, pathPrefix: string) {
+  async function handleFileUpload(blob: Blob | File, bucket: string, pathPrefix: string) {
     setIsUploading(true);
     try {
-      const fileExt = file.name.split(".").pop();
-      const fileName = `${Math.random()}.${fileExt}`;
+      const ext = blob instanceof File ? (blob.name.split(".").pop() || "jpg") : "jpg";
+      const fileName = `${Date.now()}.${ext}`;
       const filePath = `${pathPrefix}/${fileName}`;
       
-      const { error } = await supabase.storage.from(bucket).upload(filePath, file);
+      const { error } = await supabase.storage.from(bucket).upload(filePath, blob);
       if (error) throw error;
 
       const { data: { publicUrl } } = supabase.storage.from(bucket).getPublicUrl(filePath);
@@ -189,6 +211,38 @@ export default function AdminPage() {
     }
   }
 
+  function openCropForAvatar(file: File) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setCropSrc(e.target?.result as string);
+      setCropTarget("avatar");
+      setCropAspect(1);
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function openCropForProject(file: File) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setCropSrc(e.target?.result as string);
+      setCropTarget("project");
+      setCropAspect(16 / 9);
+    };
+    reader.readAsDataURL(file);
+  }
+
+  async function handleCropDone(blob: Blob) {
+    setCropSrc(null);
+    if (cropTarget === "avatar") {
+      const url = await handleFileUpload(blob, "portfolio-assets", "avatars");
+      if (url) setPhotoUrl(url);
+    } else if (cropTarget === "project") {
+      const url = await handleFileUpload(blob, "portfolio-assets", "projects");
+      if (url) setImageUrls(prev => [...prev, url]);
+    }
+    setCropTarget(null);
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setIsLoading(true);
@@ -197,7 +251,7 @@ export default function AdminPage() {
 
     if (activeTab === "projects") {
       table = "projects";
-      data = { title, description, image_url: JSON.stringify(imageUrls), github_url: githubUrl, live_url: liveUrl, type: projectType };
+      data = { title, description, image_url: JSON.stringify(imageUrls), github_url: githubUrl, live_url: liveUrl, type: projectType, tools_used: toolsUsed };
     } else if (activeTab === "experience") {
       table = "experience";
       data = { role, company, duration, description: expDescription };
@@ -249,6 +303,7 @@ export default function AdminPage() {
       setTitle(item.title); setDescription(item.description);
       try { setImageUrls(JSON.parse(item.image_url)); } catch { setImageUrls([item.image_url]); }
       setGithubUrl(item.github_url || ""); setLiveUrl(item.live_url || ""); setProjectType(item.type || "project");
+      setToolsUsed(item.tools_used || "");
     } else if (activeTab === "experience") {
       setRole(item.role); setCompany(item.company); setDuration(item.duration); setExpDescription(item.description);
     } else if (activeTab === "certs") {
@@ -258,7 +313,7 @@ export default function AdminPage() {
 
   function resetForm() {
     setIsEditing(false); setIsAdding(false); setCurrentId(null);
-    setTitle(""); setDescription(""); setImageUrls([]); setGithubUrl(""); setLiveUrl(""); setProjectType("project");
+    setTitle(""); setDescription(""); setImageUrls([]); setGithubUrl(""); setLiveUrl(""); setProjectType("project"); setToolsUsed("");
     setRole(""); setCompany(""); setDuration(""); setExpDescription(""); setCertName(""); setCertUrl("");
   }
 
@@ -280,6 +335,15 @@ export default function AdminPage() {
 
   return (
     <PageTransition>
+      {cropSrc && (
+        <CropModal
+          imageSrc={cropSrc}
+          aspect={cropAspect}
+          cropShape={cropTarget === "avatar" ? "round" : "rect"}
+          onCrop={handleCropDone}
+          onCancel={() => { setCropSrc(null); setCropTarget(null); }}
+        />
+      )}
       <div className="flex min-h-screen bg-[#020617] text-slate-200">
         <aside className="w-64 border-r border-slate-800 p-6 flex flex-col shrink-0">
           <div className="flex items-center gap-3 mb-10 px-2 font-bold text-lg text-white">Console<span className="text-sky-500">.v1</span></div>
@@ -313,6 +377,7 @@ export default function AdminPage() {
                       </select>
                       <input type="url" value={githubUrl} onChange={e => setGithubUrl(e.target.value)} className="saas-input" placeholder="GitHub" />
                       <input type="url" value={liveUrl} onChange={e => setLiveUrl(e.target.value)} className="saas-input" placeholder="Live Demo" />
+                      <input type="text" value={toolsUsed} onChange={e => setToolsUsed(e.target.value)} className="saas-input" placeholder="Tools used (comma-separated, e.g. Cypress, Postman)" />
                     </div>
                     <div className="space-y-4">
                       <textarea required rows={4} value={description} onChange={e => setDescription(e.target.value)} className="saas-input" placeholder="Description" />
@@ -382,25 +447,61 @@ export default function AdminPage() {
           )}
 
           <div className={`mt-10 space-y-4 ${activeTab === "profile" ? "hidden" : ""}`}>
-            {activeTab === "projects" && projects.map(p => (
-              <div key={p.id} className="bg-slate-900 p-4 rounded-2xl flex items-center gap-4">
-                <img src={p.image_url?.startsWith('[') ? JSON.parse(p.image_url)[0] : p.image_url} className="w-12 h-12 rounded-lg object-cover" />
-                <div className="flex-1"><p className="font-bold text-sm text-white">{p.title}</p><p className="text-xs text-slate-500">{p.type}</p></div>
-                <div className="flex gap-2"><button onClick={() => handleEdit(p)} className="p-2 text-slate-400"><FaEdit size={14} /></button><button onClick={() => handleDelete(p.id, "projects")} className="p-2 text-slate-400"><FaTrash size={14} /></button></div>
-              </div>
-            ))}
-            {activeTab === "experience" && experience.map(exp => (
-              <div key={exp.id} className="bg-slate-900 p-4 rounded-2xl flex items-center justify-between">
-                <div><p className="font-bold text-sm text-white">{exp.role}</p><p className="text-xs text-sky-400">{exp.company}</p></div>
-                <div className="flex gap-2"><button onClick={() => handleEdit(exp)} className="p-2 text-slate-400"><FaEdit size={14} /></button><button onClick={() => handleDelete(exp.id, "experience")} className="p-2 text-slate-400"><FaTrash size={14} /></button></div>
-              </div>
-            ))}
-            {activeTab === "certs" && certs.map(c => (
-              <div key={c.id} className="bg-slate-900 p-4 rounded-2xl flex items-center justify-between">
-                <div><p className="font-bold text-sm text-white">{c.name}</p></div>
-                <div className="flex gap-2"><button onClick={() => handleEdit(c)} className="p-2 text-slate-400"><FaEdit size={14} /></button><button onClick={() => handleDelete(c.id, "certifications")} className="p-2 text-slate-400"><FaTrash size={14} /></button></div>
-              </div>
-            ))}
+            {activeTab === "projects" && (
+              <DragDropContext onDragEnd={(r) => handleOnDragEnd(r, "projects")}>
+                <Droppable droppableId="projects">{(provided) => (
+                  <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-3">
+                    {projects.map((p, index) => (
+                      <Draggable key={p.id} draggableId={p.id.toString()} index={index}>{(provided) => (
+                        <div ref={provided.innerRef} {...provided.draggableProps} className="bg-slate-900 p-4 rounded-2xl flex items-center gap-4 border border-white/5 hover:border-sky-500/20 transition-all">
+                          <div {...provided.dragHandleProps} className="text-slate-600 hover:text-slate-400 cursor-grab px-1"><FaGripVertical size={14} /></div>
+                          <img src={p.image_url?.startsWith('[') ? JSON.parse(p.image_url)[0] : p.image_url} className="w-12 h-12 rounded-lg object-cover" />
+                          <div className="flex-1"><p className="font-bold text-sm text-white">{p.title}</p><p className="text-xs text-slate-500">{p.type}</p></div>
+                          <div className="flex gap-2"><button onClick={() => handleEdit(p)} className="p-2 text-slate-400"><FaEdit size={14} /></button><button onClick={() => handleDelete(p.id, "projects")} className="p-2 text-slate-400"><FaTrash size={14} /></button></div>
+                        </div>
+                      )}</Draggable>
+                    ))}
+                    {provided.placeholder}
+                  </div>
+                )}</Droppable>
+              </DragDropContext>
+            )}
+            {activeTab === "experience" && (
+              <DragDropContext onDragEnd={(r) => handleOnDragEnd(r, "experience")}>
+                <Droppable droppableId="experience">{(provided) => (
+                  <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-3">
+                    {experience.map((exp, index) => (
+                      <Draggable key={exp.id} draggableId={exp.id.toString()} index={index}>{(provided) => (
+                        <div ref={provided.innerRef} {...provided.draggableProps} className="bg-slate-900 p-4 rounded-2xl flex items-center gap-4 border border-white/5 hover:border-sky-500/20 transition-all">
+                          <div {...provided.dragHandleProps} className="text-slate-600 hover:text-slate-400 cursor-grab px-1"><FaGripVertical size={14} /></div>
+                          <div className="flex-1"><p className="font-bold text-sm text-white">{exp.role}</p><p className="text-xs text-sky-400">{exp.company}</p></div>
+                          <div className="flex gap-2"><button onClick={() => handleEdit(exp)} className="p-2 text-slate-400"><FaEdit size={14} /></button><button onClick={() => handleDelete(exp.id, "experience")} className="p-2 text-slate-400"><FaTrash size={14} /></button></div>
+                        </div>
+                      )}</Draggable>
+                    ))}
+                    {provided.placeholder}
+                  </div>
+                )}</Droppable>
+              </DragDropContext>
+            )}
+            {activeTab === "certs" && (
+              <DragDropContext onDragEnd={(r) => handleOnDragEnd(r, "certs")}>
+                <Droppable droppableId="certs">{(provided) => (
+                  <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-3">
+                    {certs.map((c, index) => (
+                      <Draggable key={c.id} draggableId={c.id.toString()} index={index}>{(provided) => (
+                        <div ref={provided.innerRef} {...provided.draggableProps} className="bg-slate-900 p-4 rounded-2xl flex items-center gap-4 border border-white/5 hover:border-sky-500/20 transition-all">
+                          <div {...provided.dragHandleProps} className="text-slate-600 hover:text-slate-400 cursor-grab px-1"><FaGripVertical size={14} /></div>
+                          <div className="flex-1"><p className="font-bold text-sm text-white">{c.name}</p></div>
+                          <div className="flex gap-2"><button onClick={() => handleEdit(c)} className="p-2 text-slate-400"><FaEdit size={14} /></button><button onClick={() => handleDelete(c.id, "certifications")} className="p-2 text-slate-400"><FaTrash size={14} /></button></div>
+                        </div>
+                      )}</Draggable>
+                    ))}
+                    {provided.placeholder}
+                  </div>
+                )}</Droppable>
+              </DragDropContext>
+            )}
             {activeTab === "messages" && messages.map(m => (
               <div key={m.id} className="bg-slate-900 p-5 rounded-2xl">
                 <div className="flex justify-between items-start mb-2"><p className="font-bold text-white text-sm">{m.name}</p><button onClick={() => handleDelete(m.id, "messages")} className="text-slate-600"><FaTrash size={12} /></button></div>
@@ -413,16 +514,13 @@ export default function AdminPage() {
         {/* Global Inputs */}
         <input type="file" ref={fileInputRef} className="hidden" multiple accept="image/*" onChange={async (e) => {
           if (!e.target.files) return;
-          for (const file of Array.from(e.target.files)) {
-            const url = await handleFileUpload(file, "portfolio-assets", "projects");
-            if (url) setImageUrls(prev => [...prev, url]);
-          }
+          // Crop each project image
+          const file = e.target.files[0];
+          if (file) openCropForProject(file);
+          e.target.value = "";
         }} />
-        <input type="file" ref={avatarInputRef} className="hidden" accept="image/*" onChange={async (e) => {
-          if (e.target.files?.[0]) {
-            const url = await handleFileUpload(e.target.files[0], "portfolio-assets", "avatars");
-            if (url) setPhotoUrl(url);
-          }
+        <input type="file" ref={avatarInputRef} className="hidden" accept="image/*" onChange={(e) => {
+          if (e.target.files?.[0]) { openCropForAvatar(e.target.files[0]); e.target.value = ""; }
         }} />
         <input type="file" ref={cvInputRef} className="hidden" accept=".pdf" onChange={async (e) => {
           if (e.target.files?.[0]) {
