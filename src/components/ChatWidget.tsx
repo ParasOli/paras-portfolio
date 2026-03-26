@@ -194,11 +194,11 @@ export default function ChatWidget() {
         {isOpen && (
           <motion.div
             ref={chatRef}
-            initial={{ opacity: 0, y: 16, scale: 0.95 }}
+            initial={{ opacity: 0, y: 30, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 16, scale: 0.95 }}
-            transition={{ type: "spring", stiffness: 380, damping: 30 }}
-            className="fixed bottom-24 right-4 sm:right-8 w-[calc(100vw-32px)] max-w-[340px] sm:max-w-[380px] h-[480px] sm:h-[560px] bg-slate-900/98 backdrop-blur-2xl border border-white/10 rounded-[2rem] shadow-2xl flex flex-col overflow-hidden"
+            exit={{ opacity: 0, y: 30, scale: 0.95 }}
+            transition={{ type: "spring", stiffness: 400, damping: 28 }}
+            className="fixed bottom-24 right-4 sm:right-8 w-[calc(100%-32px)] max-w-[320px] sm:max-w-[380px] h-[520px] sm:h-[560px] bg-slate-900/98 backdrop-blur-3xl border border-white/10 rounded-[2rem] shadow-2xl flex flex-col overflow-hidden z-[10001]"
           >
             <div className="p-4 bg-gradient-to-r from-sky-700 to-sky-500 text-white flex items-center justify-between shrink-0">
               <div className="flex items-center gap-3">
@@ -254,17 +254,17 @@ export default function ChatWidget() {
               </div>
             )}
 
-            <form onSubmit={handleSubmit} className="p-3 border-t border-white/5 shrink-0 bg-slate-950/40">
-              <div className="flex items-center gap-2">
+            <form onSubmit={handleSubmit} className="p-4 border-t border-white/5 shrink-0 bg-slate-950/40 pb-[max(1rem,env(safe-area-inset-bottom))]">
+              <div className="flex items-center gap-3">
                 <input
                   type="text" value={input} onChange={e => setInput(e.target.value)}
                   placeholder="Ask me anything..."
-                  className="flex-1 bg-slate-900 border border-slate-800 focus:border-sky-500/40 rounded-2xl pl-4 py-2.5 text-sm text-slate-200 focus:outline-none transition-all placeholder:text-slate-600"
+                  className="flex-1 bg-slate-900 border border-slate-800 focus:border-sky-500/40 rounded-2xl pl-5 py-3.5 text-[16px] sm:text-sm text-slate-200 focus:outline-none transition-all placeholder:text-slate-600 appearance-none"
                 />
                 <button type="submit" disabled={isLoading || !input.trim()}
-                  className="w-9 h-9 bg-sky-500 disabled:bg-slate-700 hover:bg-sky-400 transition-all rounded-xl flex items-center justify-center text-white disabled:text-slate-500 shrink-0"
+                  className="w-11 h-11 bg-sky-500 disabled:bg-slate-700 hover:bg-sky-400 transition-all rounded-2xl flex items-center justify-center text-white shadow-lg shadow-sky-500/20 shrink-0"
                 >
-                  <FaPaperPlane size={11} />
+                  <FaPaperPlane size={14} />
                 </button>
               </div>
             </form>
