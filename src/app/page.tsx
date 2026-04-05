@@ -133,7 +133,7 @@ export default function Home() {
                   borderRadius: ["30% 70% 70% 30% / 30% 30% 70% 70%", "70% 30% 30% 70% / 70% 70% 30% 30%", "30% 70% 70% 30% / 30% 30% 70% 70%"]
                 }}
                 transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
-                className="relative w-full aspect-square md:w-[480px] md:h-[480px] mx-auto bg-slate-900 border-2 border-white/5 overflow-hidden shadow-2xl flex items-center justify-center p-2 group-hover:border-sky-500/20 transition-all"
+                className="relative w-full aspect-square md:w-[480px] md:h-[480px] mx-auto bg-slate-900 border-2 border-white/5 overflow-hidden shadow-2xl flex items-center justify-center group-hover:border-sky-500/20 transition-all"
               >
                 {/* Always show placeholder pulse if not loaded */}
                 <div className={`absolute inset-0 bg-slate-800 flex items-center justify-center transition-opacity duration-1000 ${imageLoaded ? 'opacity-0 pointer-events-none' : 'opacity-100 animate-pulse'}`}>

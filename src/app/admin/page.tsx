@@ -211,24 +211,48 @@ export default function AdminPage() {
     }
   }
 
-  function openCropForAvatar(file: File) {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      setCropSrc(e.target?.result as string);
-      setCropTarget("avatar");
-      setCropAspect(1);
-    };
-    reader.readAsDataURL(file);
+  async function processImageFile(file: File): Promise<string> {
+    setIsLoading(true);
+    try {
+      if (file.name.toLowerCase().endsWith(".heic") || file.name.toLowerCase().endsWith(".heif") || file.type === "image/heic" || file.type === "image/heif") {
+        const heic2any = (await import("heic2any")).default;
+        const convertedBlob = await heic2any({
+          blob: file,
+          toType: "image/jpeg",
+          quality: 0.9,
+        });
+        const blobToUse = Array.isArray(convertedBlob) ? convertedBlob[0] : convertedBlob;
+        return URL.createObjectURL(blobToUse);
+      }
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target?.result as string);
+        reader.readAsDataURL(file);
+      });
+    } catch (err: any) {
+      alert("Image format error: " + (err.message || String(err)));
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
   }
 
-  function openCropForProject(file: File) {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      setCropSrc(e.target?.result as string);
+  async function openCropForAvatar(file: File) {
+    try {
+      const src = await processImageFile(file);
+      setCropSrc(src);
+      setCropTarget("avatar");
+      setCropAspect(1);
+    } catch (e) {}
+  }
+
+  async function openCropForProject(file: File) {
+    try {
+      const src = await processImageFile(file);
+      setCropSrc(src);
       setCropTarget("project");
       setCropAspect(16 / 9);
-    };
-    reader.readAsDataURL(file);
+    } catch (e) {}
   }
 
   async function handleCropDone(blob: Blob) {
@@ -512,14 +536,14 @@ export default function AdminPage() {
         </main>
 
         {/* Global Inputs */}
-        <input type="file" ref={fileInputRef} className="hidden" multiple accept="image/*" onChange={async (e) => {
+        <input type="file" ref={fileInputRef} className="hidden" multiple accept="image/*,.heic,.heif,.png,.jpg,.jpeg,.webp" onChange={async (e) => {
           if (!e.target.files) return;
           // Crop each project image
           const file = e.target.files[0];
           if (file) openCropForProject(file);
           e.target.value = "";
         }} />
-        <input type="file" ref={avatarInputRef} className="hidden" accept="image/*" onChange={(e) => {
+        <input type="file" ref={avatarInputRef} className="hidden" accept="image/*,.heic,.heif,.png,.jpg,.jpeg,.webp" onChange={(e) => {
           if (e.target.files?.[0]) { openCropForAvatar(e.target.files[0]); e.target.value = ""; }
         }} />
         <input type="file" ref={cvInputRef} className="hidden" accept=".pdf" onChange={async (e) => {

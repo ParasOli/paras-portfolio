@@ -22,6 +22,8 @@ export default function CropModal({
   const imgRef = useRef<HTMLImageElement | null>(null);
 
   const [scale, setScale] = useState(1);
+  const [minScale, setMinScale] = useState(0.1);
+  const [maxScale, setMaxScale] = useState(5);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
@@ -112,7 +114,13 @@ export default function CropModal({
       imgRef.current = img;
       // Auto-fit
       const fitScale = Math.max(cropW / img.naturalWidth, cropH / img.naturalHeight);
-      setScale(fitScale * 0.7);
+      
+      const calculatedMin = Math.min(fitScale * 0.2, 0.05);
+      const calculatedMax = Math.max(fitScale * 10, 5);
+      setMinScale(calculatedMin);
+      setMaxScale(calculatedMax);
+      
+      setScale(fitScale);
       setOffset({ x: 0, y: 0 });
       setImgLoaded(true);
     };
@@ -147,22 +155,43 @@ export default function CropModal({
     const img = imgRef.current;
     if (!img) return;
 
+    const screenDrawW = img.naturalWidth * scale;
+    const screenDrawH = img.naturalHeight * scale;
+    const screenImgX = CANVAS_SIZE / 2 - screenDrawW / 2 + offset.x;
+    const screenImgY = CANVAS_SIZE / 2 - screenDrawH / 2 + offset.y;
+
+    // Use a scaling factor to guarantee high quality output.
+    // Factor of 1/scale renders the image at its natural resolution.
+    let factor = 1 / scale;
+    
+    // Cap output to 2048px maximum width/height to avoid massive files.
+    const maxCanvasSize = 2048;
+    if (cropW * factor > maxCanvasSize) {
+      factor = maxCanvasSize / cropW;
+    }
+    if (cropH * factor > maxCanvasSize) {
+      factor = Math.min(factor, maxCanvasSize / cropH);
+    }
+
     const out = document.createElement("canvas");
-    out.width = cropW;
-    out.height = cropH;
+    out.width = cropW * factor;
+    out.height = cropH * factor;
     const ctx = out.getContext("2d");
     if (!ctx) return;
 
-    const drawW = img.naturalWidth * scale;
-    const drawH = img.naturalHeight * scale;
-    const imgX = CANVAS_SIZE / 2 - drawW / 2 + offset.x;
-    const imgY = CANVAS_SIZE / 2 - drawH / 2 + offset.y;
+    // By multiplying all parameters by factor, we effectively use the exact same reliable 
+    // clipping logic as the visual screen, but rendered at a much higher resolution.
+    // This perfectly avoids Safari/iOS bugs with 9-argument drawImage and negative source boundaries.
+    const drawW = screenDrawW * factor;
+    const drawH = screenDrawH * factor;
+    const dx = (screenImgX - cropX) * factor;
+    const dy = (screenImgY - cropY) * factor;
 
-    ctx.drawImage(img, imgX - cropX, imgY - cropY, drawW, drawH);
+    ctx.drawImage(img, dx, dy, drawW, drawH);
 
     out.toBlob((blob) => {
       if (blob) onCrop(blob);
-    }, "image/jpeg", 0.92);
+    }, "image/webp", 0.95);
   };
 
   return (
@@ -192,14 +221,14 @@ export default function CropModal({
 
         {/* Zoom Slider */}
         <div className="flex items-center gap-3 w-full">
-          <button onClick={() => setScale(s => Math.max(0.2, s - 0.1))} className="text-slate-400 hover:text-white"><FaSearchMinus size={14} /></button>
+          <button onClick={() => setScale(s => Math.max(minScale, s - (maxScale - minScale) * 0.05))} className="text-slate-400 hover:text-white"><FaSearchMinus size={14} /></button>
           <input
-            type="range" min="0.5" max="4" step="0.01"
+            type="range" min={minScale} max={maxScale} step={(maxScale - minScale) / 100}
             value={scale}
             onChange={e => setScale(parseFloat(e.target.value))}
             className="flex-1 accent-sky-500"
           />
-          <button onClick={() => setScale(s => Math.min(4, s + 0.1))} className="text-slate-400 hover:text-white"><FaSearchPlus size={14} /></button>
+          <button onClick={() => setScale(s => Math.min(maxScale, s + (maxScale - minScale) * 0.05))} className="text-slate-400 hover:text-white"><FaSearchPlus size={14} /></button>
         </div>
 
         <div className="flex gap-3 w-full">
