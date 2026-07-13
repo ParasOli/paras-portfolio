@@ -100,7 +100,7 @@ function BarList({ title, rows, total, render }: { title: string; rows: [string,
   );
 }
 
-function AnalyticsPanel({ views, loading, onRefresh }: { views: PageView[]; loading: boolean; onRefresh: () => void }) {
+function AnalyticsPanel({ views, loading }: { views: PageView[]; loading: boolean }) {
   if (loading && views.length === 0) {
     return (
       <div className="card p-12 text-center mt-8">
@@ -130,10 +130,6 @@ function AnalyticsPanel({ views, loading, onRefresh }: { views: PageView[]; load
 
   return (
     <div className="mt-8 space-y-6">
-      <div className="flex justify-end -mb-2">
-        <button onClick={onRefresh} className="text-xs font-bold text-[var(--muted)] hover:text-[var(--foreground)]">↻ Refresh</button>
-      </div>
-
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <StatCard label="Unique visitors" value={uniqueVisitors.toLocaleString()} />
         <StatCard label="Total views" value={views.length.toLocaleString()} />
@@ -573,6 +569,9 @@ export default function AdminPage() {
               {activeTab !== "messages" && activeTab !== "profile" && activeTab !== "analytics" && !isEditing && !isAdding && (
                 <button onClick={() => setIsAdding(true)} className="btn-tactile bg-[var(--accent)] text-[var(--accent-ink)] font-extrabold px-5 py-2.5 rounded-full text-sm flex items-center gap-2 hover:bg-[var(--accent-strong)]"><FaPlus size={12} /> Add new</button>
               )}
+              {activeTab === "analytics" && (
+                <button onClick={fetchAnalytics} className="btn-tactile bg-white border border-[var(--border)] text-[var(--foreground)] font-bold px-5 py-2.5 rounded-full text-sm flex items-center gap-2 hover:bg-[var(--surface)]"><FaChartBar size={12} /> Refresh</button>
+              )}
             </div>
 
             {(isEditing || isAdding || activeTab === "profile") && (
@@ -718,7 +717,7 @@ export default function AdminPage() {
             )}
 
             {activeTab === "analytics" && (
-              <AnalyticsPanel views={views} loading={analyticsLoading} onRefresh={fetchAnalytics} />
+              <AnalyticsPanel views={views} loading={analyticsLoading} />
             )}
 
             <div className={`mt-8 space-y-3 ${activeTab === "profile" || activeTab === "analytics" ? "hidden" : ""}`}>
