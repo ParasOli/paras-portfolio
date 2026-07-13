@@ -26,7 +26,6 @@ export default function CropModal({
   const [maxScale, setMaxScale] = useState(5);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [imgLoaded, setImgLoaded] = useState(false);
 
   const CROP_SIZE = 320;
@@ -112,14 +111,11 @@ export default function CropModal({
     const img = new window.Image();
     img.onload = () => {
       imgRef.current = img;
-      // Auto-fit
+      // Auto-fit — fit is the *minimum* zoom so the crop is always fully
+      // covered (no empty space, nothing to get stuck against).
       const fitScale = Math.max(cropW / img.naturalWidth, cropH / img.naturalHeight);
-      
-      const calculatedMin = Math.min(fitScale * 0.2, 0.05);
-      const calculatedMax = Math.max(fitScale * 10, 5);
-      setMinScale(calculatedMin);
-      setMaxScale(calculatedMax);
-      
+      setMinScale(fitScale);
+      setMaxScale(Math.max(fitScale * 8, 8));
       setScale(fitScale);
       setOffset({ x: 0, y: 0 });
       setImgLoaded(true);
@@ -129,27 +125,71 @@ export default function CropModal({
 
   useEffect(() => { draw(); }, [draw]);
 
-  const handleMouseDown = (e: React.MouseEvent) => {
+  // Keep the image covering the crop box so it can never be dragged into
+  // empty space (that's what made the frame feel "stuck").
+  const clampOffset = useCallback((off: { x: number; y: number }, scaleVal: number) => {
+    const img = imgRef.current;
+    if (!img) return off;
+    const drawW = img.naturalWidth * scaleVal;
+    const drawH = img.naturalHeight * scaleVal;
+    const half = CANVAS_SIZE / 2;
+    const maxX = cropX - half + drawW / 2;
+    const minX = cropX + cropW - half - drawW / 2;
+    const maxY = cropY - half + drawH / 2;
+    const minY = cropY + cropH - half - drawH / 2;
+    const clamp = (v: number, lo: number, hi: number) =>
+      lo > hi ? (lo + hi) / 2 : Math.min(hi, Math.max(lo, v));
+    return { x: clamp(off.x, minX, maxX), y: clamp(off.y, minY, maxY) };
+  }, [cropX, cropY, cropW, cropH]);
+
+  // Set zoom and re-clamp the offset together so the image always stays
+  // inside bounds (no empty space, nothing to get stuck against).
+  const scaleRef = useRef(scale);
+  useEffect(() => { scaleRef.current = scale; }, [scale]);
+  const zoomTo = (next: number) => {
+    const clamped = Math.min(maxScale, Math.max(minScale, next));
+    setScale(clamped);
+    setOffset(o => clampOffset(o, clamped));
+  };
+
+  // Convert screen pixels to canvas-space pixels (the canvas is drawn at
+  // CANVAS_SIZE but may be displayed smaller, e.g. on mobile).
+  const pointerRatio = () => {
+    const c = canvasRef.current;
+    return c && c.clientWidth ? CANVAS_SIZE / c.clientWidth : 1;
+  };
+
+  const dragRef = useRef({ x: 0, y: 0, offX: 0, offY: 0 });
+
+  const handlePointerDown = (e: React.PointerEvent) => {
+    e.currentTarget.setPointerCapture(e.pointerId);
     setIsDragging(true);
-    setDragStart({ x: e.clientX - offset.x, y: e.clientY - offset.y });
+    dragRef.current = { x: e.clientX, y: e.clientY, offX: offset.x, offY: offset.y };
   };
 
-  const handleMouseMove = (e: React.MouseEvent) => {
+  const handlePointerMove = (e: React.PointerEvent) => {
     if (!isDragging) return;
-    setOffset({ x: e.clientX - dragStart.x, y: e.clientY - dragStart.y });
+    const r = pointerRatio();
+    const nx = dragRef.current.offX + (e.clientX - dragRef.current.x) * r;
+    const ny = dragRef.current.offY + (e.clientY - dragRef.current.y) * r;
+    setOffset(clampOffset({ x: nx, y: ny }, scale));
   };
 
-  const handleTouchStart = (e: React.TouchEvent) => {
-    const t = e.touches[0];
-    setIsDragging(true);
-    setDragStart({ x: t.clientX - offset.x, y: t.clientY - offset.y });
-  };
+  const endDrag = () => setIsDragging(false);
 
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (!isDragging) return;
-    const t = e.touches[0];
-    setOffset({ x: t.clientX - dragStart.x, y: t.clientY - dragStart.y });
-  };
+  // Scroll to zoom, centred on the canvas.
+  useEffect(() => {
+    const c = canvasRef.current;
+    if (!c) return;
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const next = Math.min(maxScale, Math.max(minScale, scaleRef.current * (1 - e.deltaY * 0.0015)));
+      setScale(next);
+      setOffset(o => clampOffset(o, next));
+    };
+    c.addEventListener("wheel", onWheel, { passive: false });
+    return () => c.removeEventListener("wheel", onWheel);
+  }, [minScale, maxScale, clampOffset]);
 
   const handleConfirm = () => {
     const img = imgRef.current;
@@ -211,29 +251,26 @@ export default function CropModal({
           ref={canvasRef}
           width={CANVAS_SIZE}
           height={CANVAS_SIZE}
-          className="rounded-2xl cursor-grab active:cursor-grabbing touch-none"
+          className="rounded-2xl cursor-grab active:cursor-grabbing touch-none select-none"
           style={{ width: "100%", maxWidth: CANVAS_SIZE }}
-          onMouseDown={handleMouseDown}
-          onMouseMove={handleMouseMove}
-          onMouseUp={() => setIsDragging(false)}
-          onMouseLeave={() => setIsDragging(false)}
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={() => setIsDragging(false)}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={endDrag}
+          onPointerCancel={endDrag}
         />
 
-        <p className="text-[11px] font-bold text-[var(--faint)] uppercase tracking-wide">Drag to reposition</p>
+        <p className="text-[11px] font-bold text-[var(--faint)] uppercase tracking-wide">Drag to reposition · scroll or slide to zoom</p>
 
         {/* Zoom Slider */}
         <div className="flex items-center gap-3 w-full">
-          <button onClick={() => setScale(s => Math.max(minScale, s - (maxScale - minScale) * 0.05))} className="text-[var(--muted)] hover:text-[var(--foreground)]"><FaSearchMinus size={14} /></button>
+          <button onClick={() => zoomTo(scale - (maxScale - minScale) * 0.05)} className="text-[var(--muted)] hover:text-[var(--foreground)]"><FaSearchMinus size={14} /></button>
           <input
             type="range" min={minScale} max={maxScale} step={(maxScale - minScale) / 100}
             value={scale}
-            onChange={e => setScale(parseFloat(e.target.value))}
+            onChange={e => zoomTo(parseFloat(e.target.value))}
             className="flex-1 accent-[var(--accent-strong)]"
           />
-          <button onClick={() => setScale(s => Math.min(maxScale, s + (maxScale - minScale) * 0.05))} className="text-[var(--muted)] hover:text-[var(--foreground)]"><FaSearchPlus size={14} /></button>
+          <button onClick={() => zoomTo(scale + (maxScale - minScale) * 0.05)} className="text-[var(--muted)] hover:text-[var(--foreground)]"><FaSearchPlus size={14} /></button>
         </div>
 
         <div className="flex gap-3 w-full">
