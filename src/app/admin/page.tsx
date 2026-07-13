@@ -210,11 +210,17 @@ export default function AdminPage() {
   async function handleFileUpload(blob: Blob | File, bucket: string, pathPrefix: string) {
     setIsUploading(true);
     try {
-      const ext = blob instanceof File ? (blob.name.split(".").pop() || "jpg") : "jpg";
+      // Derive the extension from the blob's actual MIME type so cropped
+      // WebP output isn't mislabelled as .jpg (which breaks the content-type).
+      const typeExt = blob.type ? blob.type.split("/").pop() : "";
+      const ext = typeExt || (blob instanceof File ? (blob.name.split(".").pop() || "jpg") : "jpg");
       const fileName = `${Date.now()}.${ext}`;
       const filePath = `${pathPrefix}/${fileName}`;
 
-      const { error } = await supabase.storage.from(bucket).upload(filePath, blob);
+      const { error } = await supabase.storage.from(bucket).upload(filePath, blob, {
+        contentType: blob.type || undefined,
+        cacheControl: "31536000",
+      });
       if (error) throw error;
 
       const { data: { publicUrl } } = supabase.storage.from(bucket).getPublicUrl(filePath);

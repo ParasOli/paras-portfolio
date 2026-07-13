@@ -54,7 +54,7 @@ export default function ProjectCard({
       className="card card-hover overflow-hidden flex flex-col h-full group"
     >
       {/* Image */}
-      <div className="relative aspect-[16/10] bg-[var(--surface-2)] overflow-hidden">
+      <div className="relative aspect-video bg-[var(--surface-2)] overflow-hidden">
         <AnimatePresence mode="wait">
           {images.length > 0 ? (
             <motion.div

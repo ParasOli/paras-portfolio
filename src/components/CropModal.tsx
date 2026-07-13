@@ -179,6 +179,11 @@ export default function CropModal({
     const ctx = out.getContext("2d");
     if (!ctx) return;
 
+    // High-quality resampling — without this the browser uses a cheap
+    // nearest-neighbour-ish filter and fine detail (screenshot text) blurs.
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
+
     // By multiplying all parameters by factor, we effectively use the exact same reliable 
     // clipping logic as the visual screen, but rendered at a much higher resolution.
     // This perfectly avoids Safari/iOS bugs with 9-argument drawImage and negative source boundaries.
