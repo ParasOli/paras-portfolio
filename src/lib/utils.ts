@@ -8,6 +8,7 @@ export const parseBio = (fullBio: string) => {
   const chatSubMatch = fullBio.match(/\[chat_sub:(.*?)\]/);
   const cvFileMatch = fullBio.match(/\[cv_file:(.*?)\]/);
   const emailMatch = fullBio.match(/\[email:(.*?)\]/);
+  const phoneMatch = fullBio.match(/\[phone:(.*?)\]/);
   const ordProjMatch = fullBio.match(/\[order_projects:(.*?)\]/);
   const ordExpMatch = fullBio.match(/\[order_experience:(.*?)\]/);
   const ordCertsMatch = fullBio.match(/\[order_certs:(.*?)\]/);
@@ -19,6 +20,7 @@ export const parseBio = (fullBio: string) => {
     .replace(chatSubMatch?.[0] || "", "")
     .replace(cvFileMatch?.[0] || "", "")
     .replace(emailMatch?.[0] || "", "")
+    .replace(phoneMatch?.[0] || "", "")
     .replace(ordProjMatch?.[0] || "", "")
     .replace(ordExpMatch?.[0] || "", "")
     .replace(ordCertsMatch?.[0] || "", "")
@@ -32,6 +34,7 @@ export const parseBio = (fullBio: string) => {
     chatbotSubtitle: chatSubMatch ? chatSubMatch[1].trim() : "Expert System v1.1",
     cvFilename: cvFileMatch ? cvFileMatch[1].trim() : "Paras_Oli_QA_Automation_Engineer_Resume.pdf",
     email: emailMatch ? emailMatch[1].trim() : "",
+    phone: phoneMatch ? phoneMatch[1].trim() : "",
     orderProjects: ordProjMatch ? ordProjMatch[1].split(",").filter(Boolean) : [],
     orderExperience: ordExpMatch ? ordExpMatch[1].split(",").filter(Boolean) : [],
     orderCerts: ordCertsMatch ? ordCertsMatch[1].split(",").filter(Boolean) : []
