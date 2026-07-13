@@ -8,6 +8,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import ChatWidget from "@/components/ChatWidget";
 import ScrollProgressBar from "@/components/ScrollProgressBar";
+import VisitTracker from "@/components/VisitTracker";
 
 // Marketing/analytics params we strip from the address bar for a clean, pro URL.
 const TRACKING_PARAMS = [
@@ -46,6 +47,7 @@ export default function AppWrapper({ children }: { children: React.ReactNode }) 
 
   return (
     <>
+      <VisitTracker />
       <ScrollProgressBar />
       <SplashScreen isVisible={isLoading} />
       <Navbar />

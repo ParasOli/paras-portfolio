@@ -9,7 +9,7 @@ import CropModal from "@/components/CropModal";
 import {
   FaPlus, FaTrash, FaEdit, FaSignOutAlt, FaImage,
   FaEnvelope, FaUser, FaBriefcase, FaCertificate,
-  FaCog, FaFilePdf, FaGripVertical
+  FaCog, FaFilePdf, FaGripVertical, FaChartBar, FaGlobe, FaMobileAlt
 } from "react-icons/fa";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
 
@@ -18,6 +18,7 @@ interface Experience { id: any; role: string; company: string; duration: string;
 interface Certification { id: any; name: string; certification_url: string; }
 interface Profile { id: any; full_name: string; bio: string; photo_url: string; cv_url: string; github_url: string; linkedin_url: string; }
 interface Message { id: any; name: string; email: string; message: string; is_read: boolean; created_at: string; }
+interface PageView { id: any; path: string; referrer: string | null; country: string | null; city: string | null; device: string | null; visitor_id: string | null; created_at: string; }
 
 // Module-scope so its identity is stable across renders (inline components would
 // remount on every keystroke and drop input focus).
@@ -30,8 +31,149 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
+// Turn a 2-letter ISO country code into its flag emoji (e.g. "NP" → 🇳🇵).
+function flagOf(code: string | null): string {
+  if (!code || code.length !== 2) return "🌐";
+  const A = 0x1f1e6;
+  return String.fromCodePoint(
+    A + code.toUpperCase().charCodeAt(0) - 65,
+    A + code.toUpperCase().charCodeAt(1) - 65
+  );
+}
+
+function timeAgo(iso: string): string {
+  const then = new Date(iso).getTime();
+  const diff = Date.now() - then;
+  const m = Math.floor(diff / 60000);
+  if (m < 1) return "just now";
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  const d = Math.floor(h / 24);
+  if (d < 30) return `${d}d ago`;
+  return new Date(iso).toLocaleDateString();
+}
+
+function topN(views: PageView[], key: keyof PageView, n: number) {
+  const counts = new Map<string, number>();
+  for (const v of views) {
+    const raw = v[key];
+    if (!raw) continue;
+    const k = String(raw);
+    counts.set(k, (counts.get(k) || 0) + 1);
+  }
+  return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, n);
+}
+
+function StatCard({ label, value, sub }: { label: string; value: string | number; sub?: string }) {
+  return (
+    <div className="card p-5">
+      <p className="text-[11px] font-black uppercase tracking-wide text-[var(--faint)]">{label}</p>
+      <p className="text-3xl font-black text-[var(--foreground)] mt-1">{value}</p>
+      {sub && <p className="text-xs font-bold text-[var(--muted)] mt-1">{sub}</p>}
+    </div>
+  );
+}
+
+function BarList({ title, rows, total, render }: { title: string; rows: [string, number][]; total: number; render?: (k: string) => React.ReactNode }) {
+  return (
+    <div className="card p-5">
+      <h3 className="text-sm font-black text-[var(--foreground)] mb-4">{title}</h3>
+      {rows.length === 0 ? (
+        <p className="text-xs font-bold text-[var(--faint)]">No data yet.</p>
+      ) : (
+        <div className="space-y-2.5">
+          {rows.map(([k, count]) => (
+            <div key={k}>
+              <div className="flex justify-between items-center text-xs font-bold mb-1">
+                <span className="text-[var(--foreground)] truncate pr-2">{render ? render(k) : k}</span>
+                <span className="text-[var(--faint)] shrink-0">{count}</span>
+              </div>
+              <div className="h-1.5 rounded-full bg-[var(--surface)] overflow-hidden">
+                <div className="h-full rounded-full bg-[var(--accent-strong)]" style={{ width: `${total ? (count / total) * 100 : 0}%` }} />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AnalyticsPanel({ views, loading, onRefresh }: { views: PageView[]; loading: boolean; onRefresh: () => void }) {
+  if (loading && views.length === 0) {
+    return (
+      <div className="card p-12 text-center mt-8">
+        <div className="w-8 h-8 border-4 border-[var(--border)] border-t-[var(--accent)] rounded-full animate-spin mx-auto" />
+      </div>
+    );
+  }
+
+  if (views.length === 0) {
+    return (
+      <div className="card p-12 text-center mt-8">
+        <p className="text-[var(--faint)] font-bold text-sm">No visits recorded yet. 📊</p>
+        <p className="text-[var(--faint)] text-xs mt-2">Once the site is live and the <code>page_views</code> table exists, visits show up here.</p>
+      </div>
+    );
+  }
+
+  const now = Date.now();
+  const dayMs = 86400000;
+  const uniqueVisitors = new Set(views.map(v => v.visitor_id).filter(Boolean)).size;
+  const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
+  const viewsToday = views.filter(v => new Date(v.created_at).getTime() >= todayStart.getTime()).length;
+  const views7d = views.filter(v => now - new Date(v.created_at).getTime() <= 7 * dayMs).length;
+  const uniqueCountries = new Set(views.map(v => v.country).filter(Boolean)).size;
+
+  const recent = views.slice(0, 25);
+
+  return (
+    <div className="mt-8 space-y-6">
+      <div className="flex justify-end -mb-2">
+        <button onClick={onRefresh} className="text-xs font-bold text-[var(--muted)] hover:text-[var(--foreground)]">↻ Refresh</button>
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <StatCard label="Unique visitors" value={uniqueVisitors.toLocaleString()} />
+        <StatCard label="Total views" value={views.length.toLocaleString()} />
+        <StatCard label="Views today" value={viewsToday.toLocaleString()} sub={`${views7d.toLocaleString()} in last 7 days`} />
+        <StatCard label="Countries" value={uniqueCountries.toLocaleString()} />
+      </div>
+
+      <div className="grid md:grid-cols-2 gap-4">
+        <BarList title="Top pages" rows={topN(views, "path", 6)} total={views.length} render={(k) => (k === "/" ? "/ (home)" : k)} />
+        <BarList title="Where visitors are" rows={topN(views, "country", 6)} total={views.length} render={(k) => (
+          <span className="flex items-center gap-2"><span>{flagOf(k)}</span>{k}</span>
+        )} />
+        <BarList title="How they found you" rows={topN(views, "referrer", 6)} total={views.length} render={(k) => (
+          <span className="flex items-center gap-2"><FaGlobe className="text-[var(--faint)]" size={11} />{k}</span>
+        )} />
+        <BarList title="Devices" rows={topN(views, "device", 4)} total={views.length} render={(k) => (
+          <span className="flex items-center gap-2"><FaMobileAlt className="text-[var(--faint)]" size={11} />{k}</span>
+        )} />
+      </div>
+
+      <div className="card p-5">
+        <h3 className="text-sm font-black text-[var(--foreground)] mb-4">Recent visits</h3>
+        <div className="space-y-1">
+          {recent.map(v => (
+            <div key={v.id} className="flex items-center gap-3 py-2 border-b border-[var(--border)] last:border-0 text-xs">
+              <span className="text-base leading-none">{flagOf(v.country)}</span>
+              <span className="font-extrabold text-[var(--foreground)] w-28 shrink-0 truncate">{v.city || v.country || "Unknown"}</span>
+              <span className="font-bold text-[var(--muted)] flex-1 truncate">{v.path}</span>
+              <span className="font-bold text-[var(--faint)] shrink-0 hidden sm:inline">{v.device || "—"}</span>
+              <span className="font-bold text-[var(--faint)] shrink-0 w-16 text-right">{timeAgo(v.created_at)}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function AdminPage() {
-  const [activeTab, setActiveTab] = useState<"projects" | "experience" | "certs" | "profile" | "messages">("projects");
+  const [activeTab, setActiveTab] = useState<"projects" | "experience" | "certs" | "profile" | "messages" | "analytics">("projects");
   const [isLoading, setIsLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
   const [authChecking, setAuthChecking] = useState(true);
@@ -42,6 +184,8 @@ export default function AdminPage() {
   const [certs, setCerts] = useState<Certification[]>([]);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
+  const [views, setViews] = useState<PageView[]>([]);
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
 
   const [isEditing, setIsEditing] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
@@ -186,6 +330,22 @@ export default function AdminPage() {
     }
     setIsLoading(false);
   }
+
+  async function fetchAnalytics() {
+    setAnalyticsLoading(true);
+    // Cap the pull so the dashboard stays snappy once traffic grows.
+    const { data } = await supabase
+      .from("page_views")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(5000);
+    setViews(data || []);
+    setAnalyticsLoading(false);
+  }
+
+  useEffect(() => {
+    if (activeTab === "analytics" && !authChecking) fetchAnalytics();
+  }, [activeTab, authChecking]);
 
   async function handleOnDragEnd(result: DropResult, type: "projects" | "experience" | "certs") {
     if (!result.destination) return;
@@ -399,6 +559,7 @@ export default function AdminPage() {
             <SidebarItem id="projects" label="Works" icon={FaBriefcase} />
             <SidebarItem id="experience" label="Experience" icon={FaUser} />
             <SidebarItem id="certs" label="Certs" icon={FaCertificate} />
+            <SidebarItem id="analytics" label="Analytics" icon={FaChartBar} />
             <SidebarItem id="profile" label="Settings" icon={FaCog} />
             <SidebarItem id="messages" label="Inbox" icon={FaEnvelope} />
           </div>
@@ -409,7 +570,7 @@ export default function AdminPage() {
           <div className="max-w-5xl mx-auto">
             <div className="flex justify-between items-center mb-8">
               <h1 className="text-3xl font-black text-[var(--foreground)] capitalize">{activeTab}</h1>
-              {activeTab !== "messages" && activeTab !== "profile" && !isEditing && !isAdding && (
+              {activeTab !== "messages" && activeTab !== "profile" && activeTab !== "analytics" && !isEditing && !isAdding && (
                 <button onClick={() => setIsAdding(true)} className="btn-tactile bg-[var(--accent)] text-[var(--accent-ink)] font-extrabold px-5 py-2.5 rounded-full text-sm flex items-center gap-2 hover:bg-[var(--accent-strong)]"><FaPlus size={12} /> Add new</button>
               )}
             </div>
@@ -556,7 +717,11 @@ export default function AdminPage() {
               </div>
             )}
 
-            <div className={`mt-8 space-y-3 ${activeTab === "profile" ? "hidden" : ""}`}>
+            {activeTab === "analytics" && (
+              <AnalyticsPanel views={views} loading={analyticsLoading} onRefresh={fetchAnalytics} />
+            )}
+
+            <div className={`mt-8 space-y-3 ${activeTab === "profile" || activeTab === "analytics" ? "hidden" : ""}`}>
               {activeTab === "projects" && (
                 <DragDropContext onDragEnd={(r) => handleOnDragEnd(r, "projects")}>
                   <Droppable droppableId="projects">{(provided) => (
