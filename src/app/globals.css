@@ -1,163 +1,211 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-nunito);
   --font-mono: var(--font-geist-mono);
+
+  /* Warm yellow accent exposed to Tailwind utilities */
+  --color-accent: #facc15;
+  --color-accent-strong: #eab308;
+  --color-ink: #1c1917;
 }
 
 :root {
-  --background: #020408;
-  --foreground: #f8fafc;
-  --card: rgba(15, 23, 42, 0.4);
-  --card-border: rgba(255, 255, 255, 0.05);
-  --primary: #ffffff;
-  --primary-foreground: #000000;
-  --muted: #64748b;
-  --accent: #1e293b;
-  --signal-green: #22c55e;
-  --signal-amber: #f59e0b;
-  --signal-blue: #0ea5e9;
-  --neon-cyan: #38bdf8;
-  --neon-magenta: #818cf8;
-  --neon-emerald: #10b981;
+  /* Surfaces — warm, light, paper-like */
+  --background: #faf8f3;    /* warm cream page */
+  --card: #ffffff;          /* white cards pop on cream */
+  --surface: #f2efe6;       /* nested chips / inputs / hovers */
+  --surface-2: #ebe7db;     /* deeper nested fill */
+  --foreground: #1c1917;    /* near-black ink */
+
+  /* Borders — solid, friendly */
+  --border: #e7e1d3;
+  --border-strong: #d9d2c1;
+
+  /* Text */
+  --muted: #57534e;        /* body copy */
+  --faint: #9b968c;        /* captions / meta */
+
+  /* Warm yellow — the "just ship it" accent */
+  --accent: #facc15;
+  --accent-strong: #eab308;
+  --accent-soft: #fef6d5;
+  --accent-ink: #1c1917;   /* text sitting on yellow */
+
+  /* Supporting semantic colors */
+  --pass: #16a34a;
+  --pass-soft: #dcfce7;
+
+  /* Radius scale — generous & rounded */
+  --r-sm: 0.75rem;
+  --r: 1rem;
+  --r-lg: 1.5rem;
+  --r-xl: 2rem;
+
+  /* Signature soft shadow */
+  --shadow-sm: 0 1px 2px rgba(28, 25, 23, 0.04), 0 2px 8px rgba(28, 25, 23, 0.04);
+  --shadow: 0 4px 12px rgba(28, 25, 23, 0.06), 0 12px 32px -8px rgba(28, 25, 23, 0.08);
+  --shadow-lg: 0 8px 24px rgba(28, 25, 23, 0.08), 0 24px 60px -12px rgba(28, 25, 23, 0.12);
 }
 
 @layer base {
+  html {
+    color-scheme: light;
+  }
+
   body {
     background-color: var(--background);
     color: var(--foreground);
-    background-image: 
-      linear-gradient(rgba(255, 255, 255, 0.01) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255, 255, 255, 0.01) 1px, transparent 1px),
-      radial-gradient(circle at 20% 20%, rgba(0, 242, 255, 0.05), transparent 40%),
-      radial-gradient(circle at 80% 80%, rgba(188, 19, 254, 0.05), transparent 40%),
-      radial-gradient(circle at 50% 50%, rgba(0, 255, 136, 0.02), transparent 50%);
-    background-size: 50px 50px, 50px 50px, 100% 100%, 100% 100%, 100% 100%;
-    background-attachment: fixed;
+    font-family: var(--font-sans), system-ui, sans-serif;
     overflow-x: hidden;
+  }
+
+  ::selection {
+    background: var(--accent);
+    color: var(--accent-ink);
+  }
+
+  h1, h2, h3, h4 {
+    letter-spacing: -0.02em;
   }
 }
 
-/* Background Noise Overlay */
-body::before {
-  content: "";
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
-  opacity: 0.05;
-  pointer-events: none;
-  z-index: 9999;
+/* ---- Friendly card: white, solid hairline border, soft shadow ---- */
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-sm);
 }
 
-.glass {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0.01) 100%);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  box-shadow: 
-    0 8px 32px 0 rgba(0, 0, 0, 0.8),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+.card-hover {
+  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.25s ease, border-color 0.25s ease;
+}
+.card-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
+  border-color: var(--border-strong);
 }
 
-.glass-3d {
-  transform-style: preserve-3d;
-  transition: transform 0.3s ease;
+/* ---- White band section (contrasts with cream page) ---- */
+.surface {
+  background: #ffffff;
 }
 
-.glass-glow {
-  position: relative;
+/* ---- Yellow pill tag (category chips) ---- */
+.tag {
+  @apply inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold;
+  background: var(--accent-soft);
+  color: #92700c;
+  border: 1px solid #f6e08a;
 }
 
-.glass-glow::before {
-  content: '';
-  position: absolute;
-  inset: -1px;
-  background: linear-gradient(45deg, var(--neon-cyan), transparent, var(--neon-magenta), transparent, var(--neon-emerald));
-  background-size: 400% 400%;
-  animation: border-glow 10s linear infinite;
-  border-radius: inherit;
-  z-index: -1;
-  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  mask-composite: xor;
-  -webkit-mask-composite: xor;
-  padding: 1px;
-  opacity: 0.3;
+.tag-solid {
+  @apply inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold;
+  background: var(--accent);
+  color: var(--accent-ink);
 }
 
-@keyframes border-glow {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
-
-.text-gradient {
-  background: linear-gradient(to bottom right, #fff 40%, rgba(255, 255, 255, 0.3), var(--neon-cyan));
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-.scanner-line {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 2px;
-  background: linear-gradient(90deg, transparent, var(--neon-cyan), transparent);
-  animation: scan 8s linear infinite;
-  opacity: 0.15;
-  pointer-events: none;
-  z-index: 10;
-}
-
-@keyframes scan {
-  0% { transform: translateY(-100vh); }
-  100% { transform: translateY(100vh); }
-}
-
-.tech-grid {
-  background-image: 
-    linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
-  background-size: 40px 40px;
-}
-
-.terminal-window {
-  @apply bg-[#0f172a] border border-white/10 rounded-xl overflow-hidden shadow-2xl;
-  font-family: var(--font-mono);
-}
-
-.terminal-header {
-  @apply bg-[#1e293b] px-4 py-2 flex items-center gap-2 border-b border-white/5;
-}
-
-.dot { @apply w-2.5 h-2.5 rounded-full; }
-.dot.red { @apply bg-red-400; }
-.dot.yellow { @apply bg-amber-400; }
-.dot.green { @apply bg-emerald-400; }
-
+/* ---- Status badge (available for work) ---- */
 .status-badge {
-  @apply px-3 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider flex items-center gap-2 border border-blue-500/20 bg-blue-500/5 text-blue-400;
+  @apply inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold;
+  background: var(--background);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  box-shadow: var(--shadow-sm);
+}
+.status-badge.online {
+  background: var(--pass-soft);
+  border-color: #a7e8bd;
+  color: #15803d;
 }
 
-.status-badge.online {
-  @apply border-emerald-500/20 bg-emerald-500/5 text-emerald-400;
+/* ---- Tactile "pressable" primary button feel ---- */
+.btn-tactile {
+  box-shadow: 0 4px 0 0 var(--accent-strong), var(--shadow-sm);
+  transition: transform 0.12s ease, box-shadow 0.12s ease, background-color 0.2s ease;
 }
+.btn-tactile:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 5px 0 0 var(--accent-strong), var(--shadow);
+}
+.btn-tactile:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 0 var(--accent-strong);
+}
+
+/* ---- Playful dotted texture for hero backdrops ---- */
+.dot-grid {
+  background-image: radial-gradient(var(--border-strong) 1.2px, transparent 1.2px);
+  background-size: 22px 22px;
+}
+
+/* ---- Warm ambient glows behind hero ---- */
+.warm-glow {
+  background:
+    radial-gradient(circle at 12% 8%, rgba(250, 204, 21, 0.16), transparent 42%),
+    radial-gradient(circle at 88% 20%, rgba(250, 204, 21, 0.10), transparent 40%);
+}
+
+/* ---- Text highlight (marker underline on a word) ---- */
+.marker {
+  background: linear-gradient(180deg, transparent 62%, var(--accent) 62%);
+  padding: 0 0.1em;
+}
+
+/* ---- Admin form input ---- */
+.saas-input {
+  @apply w-full rounded-xl px-4 py-3 text-sm font-semibold transition-all;
+  background: #ffffff;
+  border: 1.5px solid var(--border-strong);
+  color: var(--foreground);
+}
+.saas-input::placeholder { color: var(--faint); font-weight: 500; }
+.saas-input:focus {
+  outline: none;
+  border-color: var(--accent-strong);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+/* ---- Admin field label ---- */
+.field-label {
+  @apply block text-xs font-extrabold uppercase tracking-wide mb-1.5;
+  color: var(--muted);
+}
+
+/* ---- Light scrollbar ---- */
+.custom-scrollbar::-webkit-scrollbar { width: 8px; height: 8px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 999px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover { background: var(--faint); }
 
 @keyframes pulse-soft {
-  0%, 100% { opacity: 0.8; }
+  0%, 100% { opacity: 0.7; }
   50% { opacity: 1; }
 }
-
 .animate-pulse-soft {
-  animation: pulse-soft 2s infinite;
+  animation: pulse-soft 2.4s ease-in-out infinite;
 }
 
-.glass-3d {
-  transform-style: preserve-3d;
-  perspective: 1000px;
+@keyframes float-slow {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+.animate-float-slow {
+  animation: float-slow 6s ease-in-out infinite;
+}
+
+/* Respect reduced-motion globally */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
 }

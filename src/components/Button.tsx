@@ -24,12 +24,15 @@ export default function Button({
   type,
 }: ButtonProps) {
   const baseStyles =
-    "inline-flex items-center justify-center px-6 py-3 rounded-full text-sm font-medium transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-white/50 disabled:opacity-50 disabled:pointer-events-none";
+    "inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full text-sm font-extrabold transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-strong)]/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--background)] disabled:opacity-50 disabled:pointer-events-none";
 
   const variants = {
-    primary: "bg-white text-black hover:shadow-[0_0_30px_rgba(0,242,255,0.4)] shadow-[0_0_20px_rgba(0,242,255,0.2)]",
-    secondary: "bg-[var(--neon-cyan)]/10 text-[var(--neon-cyan)] hover:bg-[var(--neon-cyan)]/20 border border-[var(--neon-cyan)]/20 shadow-[0_0_20px_rgba(0,242,255,0.1)]",
-    outline: "glass border-white/10 text-white/70 hover:text-white hover:border-white/30",
+    primary:
+      "btn-tactile bg-[var(--accent)] text-[var(--accent-ink)] hover:bg-[var(--accent-strong)]",
+    secondary:
+      "bg-[var(--accent-soft)] text-[#92700c] border border-[#f6e08a] hover:bg-[var(--accent)] hover:text-[var(--accent-ink)]",
+    outline:
+      "bg-white border border-[var(--border)] text-[var(--foreground)] hover:border-[var(--border-strong)] hover:bg-[var(--surface)] shadow-[var(--shadow-sm)]",
   };
 
   const Component = motion(href ? Link : "button");

@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Nunito, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ProfileProvider } from "@/context/ProfileContext";
 import AppWrapper from "@/components/AppWrapper";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const nunito = Nunito({
+  variable: "--font-nunito",
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800", "900"],
 });
 
 const geistMono = Geist_Mono({
@@ -15,8 +16,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "QA Automation Engineer | Portfolio",
-  description: "Modern portfolio showcasing QA Automation expertise, projects, and skills.",
+  title: "Paras Oli — Full-Stack Test Engineer",
+  description: "Full-Stack Test Engineer helping teams ship reliable releases through automation, API testing, and CI/CD.",
 };
 
 export default function RootLayout({
@@ -25,9 +26,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark scroll-smooth">
+    <html lang="en" className="scroll-smooth">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen flex flex-col`}
+        className={`${nunito.variable} ${geistMono.variable} antialiased min-h-screen flex flex-col`}
         suppressHydrationWarning
       >
         <ProfileProvider>

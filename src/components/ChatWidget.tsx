@@ -39,7 +39,7 @@ export default function ChatWidget() {
   const chatNameMatch = profile?.bio?.match(/\[chat_name:(.*?)\]/);
   const chatSubMatch = profile?.bio?.match(/\[chat_sub:(.*?)\]/);
   const chatName = chatNameMatch ? chatNameMatch[1] : "Portfolio AI";
-  const chatSub = chatSubMatch ? chatSubMatch[1] : "Expert System v1.1";
+  const chatSub = chatSubMatch ? chatSubMatch[1] : "AI Assistant";
 
   // Initial load
   useEffect(() => {
@@ -144,17 +144,17 @@ export default function ChatWidget() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 8, scale: 0.92 }}
             transition={{ type: "spring", stiffness: 400, damping: 28 }}
-            className="relative bg-slate-900 border border-white/10 shadow-2xl rounded-2xl rounded-br-sm px-4 py-3 max-w-[220px] cursor-pointer"
+            className="relative bg-white border border-[var(--border)] shadow-[var(--shadow-lg)] rounded-2xl rounded-br-sm px-4 py-3 max-w-[220px] cursor-pointer"
             onClick={() => setIsOpen(true)}
           >
             <TeaserText />
             <button
               onClick={(e) => { e.stopPropagation(); setShowTeaser(false); setHasDismissedTeaser(true); }}
-              className="absolute -top-2 -right-2 w-5 h-5 bg-slate-700 hover:bg-slate-600 border border-white/10 rounded-full flex items-center justify-center text-slate-400 hover:text-white transition-all"
+              className="absolute -top-2 -right-2 w-5 h-5 bg-[var(--surface-2)] hover:bg-[var(--border-strong)] border border-[var(--border)] rounded-full flex items-center justify-center text-[var(--muted)] hover:text-[var(--foreground)] transition-all"
             >
               <FaTimes size={8} />
             </button>
-            <div className="absolute -bottom-1.5 right-5 w-3 h-3 bg-slate-900 border-r border-b border-white/10 rotate-45" />
+            <div className="absolute -bottom-1.5 right-5 w-3 h-3 bg-white border-r border-b border-[var(--border)] rotate-45" />
           </motion.div>
         )}
       </AnimatePresence>
@@ -163,7 +163,7 @@ export default function ChatWidget() {
       <div className="relative">
         {!isOpen && (
           <motion.div
-            className="absolute inset-0 rounded-full bg-sky-500/25"
+            className="absolute inset-0 rounded-full bg-[var(--accent)]/25"
             animate={{ scale: [1, 1.8, 1], opacity: [0.4, 0, 0.4] }}
             transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
           />
@@ -173,7 +173,7 @@ export default function ChatWidget() {
           whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.93 }}
           animate={isOpen ? {} : { y: [0, -6, 0] }}
           transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut" }}
-          className="relative w-14 h-14 sm:w-16 sm:h-16 bg-gradient-to-tr from-sky-600 to-sky-400 text-white rounded-full shadow-xl flex items-center justify-center border-2 border-sky-300/30 overflow-hidden"
+          className="relative w-14 h-14 sm:w-16 sm:h-16 bg-[var(--accent)] text-[var(--accent-ink)] rounded-full shadow-[0_4px_0_0_var(--accent-strong),var(--shadow)] flex items-center justify-center overflow-hidden"
         >
           <AnimatePresence mode="wait">
             {isOpen ? (
@@ -198,21 +198,21 @@ export default function ChatWidget() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 30, scale: 0.95 }}
             transition={{ type: "spring", stiffness: 400, damping: 28 }}
-            className="fixed bottom-24 right-4 sm:right-8 w-[calc(100%-32px)] max-w-[320px] sm:max-w-[380px] h-[520px] sm:h-[560px] bg-slate-900/98 backdrop-blur-3xl border border-white/10 rounded-[2rem] shadow-2xl flex flex-col overflow-hidden z-[10001]"
+            className="fixed bottom-24 right-4 sm:right-8 w-[calc(100%-32px)] max-w-[320px] sm:max-w-[380px] h-[520px] sm:h-[560px] bg-white border border-[var(--border)] rounded-[var(--r-xl)] shadow-[var(--shadow-lg)] flex flex-col overflow-hidden z-[10001]"
           >
-            <div className="p-4 bg-gradient-to-r from-sky-700 to-sky-500 text-white flex items-center justify-between shrink-0">
+            <div className="p-4 bg-[var(--accent)] text-[var(--accent-ink)] flex items-center justify-between shrink-0">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-white/20 rounded-xl flex items-center justify-center">
-                  <FaRobot size={15} />
+                <div className="w-9 h-9 bg-[var(--accent-ink)]/10 rounded-xl flex items-center justify-center">
+                  <FaRobot size={16} />
                 </div>
                 <div>
-                  <h3 className="font-bold text-sm">{chatName}</h3>
-                  <p className="text-[9px] text-white/60 uppercase tracking-[0.2em] font-mono">{chatSub}</p>
+                  <h3 className="font-extrabold text-sm">{chatName}</h3>
+                  <p className="text-[11px] font-bold text-[var(--accent-ink)]/60">{chatSub}</p>
                 </div>
               </div>
               <div className="flex items-center gap-1">
-                <button onClick={clearHistory} title="Clear chat" className="p-1.5 hover:bg-white/20 rounded-lg transition-all"><FaTrash size={11} /></button>
-                <button onClick={() => setIsOpen(false)} className="p-1.5 hover:bg-white/20 rounded-lg transition-all"><FaTimes size={14} /></button>
+                <button onClick={clearHistory} title="Clear chat" className="p-1.5 hover:bg-[var(--accent-ink)]/10 rounded-lg transition-all"><FaTrash size={11} /></button>
+                <button onClick={() => setIsOpen(false)} className="p-1.5 hover:bg-[var(--accent-ink)]/10 rounded-lg transition-all"><FaTimes size={14} /></button>
               </div>
             </div>
 
@@ -221,10 +221,10 @@ export default function ChatWidget() {
                 <motion.div key={i} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}
                   className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
                 >
-                  <div className={`max-w-[88%] px-3 py-2.5 rounded-2xl text-[12px] sm:text-[13px] leading-relaxed ${
+                  <div className={`max-w-[88%] px-3.5 py-2.5 rounded-2xl text-[13px] font-medium leading-relaxed ${
                     m.role === "user"
-                      ? "bg-sky-500 text-white rounded-br-sm"
-                      : "bg-slate-800 text-slate-200 border border-white/5 rounded-bl-sm"
+                      ? "bg-[var(--accent)] text-[var(--accent-ink)] font-bold rounded-br-sm"
+                      : "bg-[var(--surface)] text-[var(--foreground)] border border-[var(--border)] rounded-bl-sm"
                   }`}>
                     {m.content}
                   </div>
@@ -232,10 +232,10 @@ export default function ChatWidget() {
               ))}
               {isLoading && (
                 <div className="flex justify-start">
-                  <div className="bg-slate-800 border border-white/5 px-4 py-3 rounded-2xl rounded-bl-sm flex gap-1.5">
-                    <span className="w-1.5 h-1.5 bg-sky-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-                    <span className="w-1.5 h-1.5 bg-sky-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-                    <span className="w-1.5 h-1.5 bg-sky-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                  <div className="bg-[var(--surface)] border border-[var(--border)] px-4 py-3 rounded-2xl rounded-bl-sm flex gap-1.5">
+                    <span className="w-1.5 h-1.5 bg-[var(--accent)] rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                    <span className="w-1.5 h-1.5 bg-[var(--accent)] rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                    <span className="w-1.5 h-1.5 bg-[var(--accent)] rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
                   </div>
                 </div>
               )}
@@ -246,7 +246,7 @@ export default function ChatWidget() {
               <div className="px-3 pb-2 flex gap-1.5 flex-wrap shrink-0">
                 {SUGGESTED.map(q => (
                   <button key={q} onClick={() => sendMessage(q)}
-                    className="px-2.5 py-1 bg-slate-800/80 border border-white/5 hover:border-sky-500/40 hover:bg-sky-500/10 hover:text-sky-400 rounded-xl text-[10px] text-slate-400 transition-all"
+                    className="px-3 py-1.5 bg-[var(--surface)] border border-[var(--border)] hover:border-[var(--accent-strong)] hover:bg-[var(--accent-soft)] hover:text-[#92700c] rounded-full text-[11px] font-bold text-[var(--muted)] transition-all"
                   >
                     {q}
                   </button>
@@ -254,15 +254,15 @@ export default function ChatWidget() {
               </div>
             )}
 
-            <form onSubmit={handleSubmit} className="p-4 border-t border-white/5 shrink-0 bg-slate-950/40 pb-[max(1rem,env(safe-area-inset-bottom))]">
+            <form onSubmit={handleSubmit} className="p-4 border-t border-[var(--border)] shrink-0 bg-[var(--surface)] pb-[max(1rem,env(safe-area-inset-bottom))]">
               <div className="flex items-center gap-3">
                 <input
                   type="text" value={input} onChange={e => setInput(e.target.value)}
                   placeholder="Ask me anything..."
-                  className="flex-1 bg-slate-900 border border-slate-800 focus:border-sky-500/40 rounded-2xl pl-5 py-3.5 text-[16px] sm:text-sm text-slate-200 focus:outline-none transition-all placeholder:text-slate-600 appearance-none"
+                  className="flex-1 bg-white border border-[var(--border)] focus:border-[var(--accent-strong)] rounded-full pl-5 py-3 text-[16px] sm:text-sm font-medium text-[var(--foreground)] focus:outline-none transition-all placeholder:text-[var(--faint)] appearance-none"
                 />
                 <button type="submit" disabled={isLoading || !input.trim()}
-                  className="w-11 h-11 bg-sky-500 disabled:bg-slate-700 hover:bg-sky-400 transition-all rounded-2xl flex items-center justify-center text-white shadow-lg shadow-sky-500/20 shrink-0"
+                  className="w-11 h-11 bg-[var(--accent)] disabled:bg-[var(--surface-2)] disabled:text-[var(--faint)] hover:bg-[var(--accent-strong)] transition-all rounded-full flex items-center justify-center text-[var(--accent-ink)] shrink-0"
                 >
                   <FaPaperPlane size={14} />
                 </button>
@@ -287,13 +287,13 @@ function TeaserText() {
         <motion.div key="dots" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
           className="flex gap-1 items-center h-5 px-1"
         >
-          <span className="w-1.5 h-1.5 bg-sky-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-          <span className="w-1.5 h-1.5 bg-sky-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-          <span className="w-1.5 h-1.5 bg-sky-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+          <span className="w-1.5 h-1.5 bg-[var(--accent)] rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+          <span className="w-1.5 h-1.5 bg-[var(--accent)] rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+          <span className="w-1.5 h-1.5 bg-[var(--accent)] rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
         </motion.div>
       ) : (
         <motion.p key="text" initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }}
-          className="text-xs text-slate-300 font-medium leading-snug"
+          className="text-xs text-[var(--foreground)] font-bold leading-snug"
         >
           👋 Need help with QA or want to know more about my work?
         </motion.p>

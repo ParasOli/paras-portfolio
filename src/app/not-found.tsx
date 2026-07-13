@@ -7,46 +7,38 @@ export const metadata: Metadata = {
 
 export default function NotFound() {
   return (
-    <div className="min-h-screen bg-[#020617] flex flex-col items-center justify-center text-center px-6 relative overflow-hidden">
-      {/* Grid background */}
-      <div className="absolute inset-0 tech-grid opacity-[0.03] pointer-events-none" />
+    <div className="min-h-screen bg-[var(--background)] warm-glow flex flex-col items-center justify-center text-center px-6 relative overflow-hidden">
+      <div className="absolute inset-0 dot-grid opacity-40 [mask-image:radial-gradient(circle_at_center,black,transparent_70%)] pointer-events-none" />
 
-      {/* Glow */}
-      <div className="absolute w-96 h-96 bg-sky-500/10 rounded-full blur-3xl top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none" />
+      <span className="tag mb-6 relative">🔍 Test failed: route not found</span>
 
-      <p className="text-[10px] font-mono text-sky-500 tracking-[0.4em] uppercase mb-6">Error 404</p>
-
-      <h1 className="text-[120px] md:text-[180px] font-black text-white/5 leading-none tracking-tighter select-none">
+      <h1 className="text-[110px] md:text-[190px] font-black text-[var(--accent)] leading-none tracking-tighter select-none relative">
         404
       </h1>
 
-      <div className="-mt-16 md:-mt-24 space-y-4">
-        <h2 className="text-2xl md:text-4xl font-bold text-white tracking-tight">
-          Page <span className="text-sky-500">not found</span>
+      <div className="mt-2 space-y-4 relative">
+        <h2 className="text-2xl md:text-4xl font-black text-[var(--foreground)] tracking-tight">
+          This page didn&apos;t pass QA.
         </h2>
-        <p className="text-slate-500 text-sm max-w-md mx-auto leading-relaxed">
-          The page you're looking for doesn't exist or has been moved. Let's get you back on track.
+        <p className="text-[var(--muted)] text-base max-w-md mx-auto leading-relaxed font-medium">
+          The page you&apos;re looking for doesn&apos;t exist or has been moved. Let&apos;s get you back on track.
         </p>
       </div>
 
-      <div className="flex gap-4 mt-10">
+      <div className="flex flex-wrap justify-center gap-3 mt-10 relative">
         <Link
           href="/"
-          className="px-6 py-3 bg-sky-500 text-slate-950 font-bold rounded-xl hover:bg-sky-400 transition-all text-sm"
+          className="btn-tactile px-6 py-3 bg-[var(--accent)] text-[var(--accent-ink)] font-extrabold rounded-full hover:bg-[var(--accent-strong)] text-sm"
         >
-          Go Home
+          Go home
         </Link>
         <Link
           href="/projects"
-          className="px-6 py-3 bg-slate-800 text-slate-300 font-medium rounded-xl hover:bg-slate-700 transition-all text-sm border border-white/5"
+          className="px-6 py-3 bg-white text-[var(--foreground)] font-bold rounded-full hover:bg-[var(--surface)] transition-all text-sm border border-[var(--border)] shadow-[var(--shadow-sm)]"
         >
-          View Projects
+          View projects
         </Link>
       </div>
-
-      <p className="mt-16 text-[10px] text-slate-700 font-mono tracking-widest uppercase">
-        // endpoint_not_resolved
-      </p>
     </div>
   );
 }

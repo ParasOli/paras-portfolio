@@ -195,11 +195,11 @@ export default function CropModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
-      <div className="bg-slate-900 border border-white/10 rounded-3xl p-6 flex flex-col items-center gap-5 shadow-2xl w-full max-w-lg">
+    <div className="fixed inset-0 z-50 bg-[var(--foreground)]/40 backdrop-blur-md flex items-center justify-center p-4">
+      <div className="bg-white border border-[var(--border)] rounded-3xl p-6 flex flex-col items-center gap-5 shadow-[var(--shadow-lg)] w-full max-w-lg">
         <div className="flex items-center justify-between w-full">
-          <h3 className="text-white font-bold text-sm">Crop Image</h3>
-          <button onClick={onCancel} className="text-slate-500 hover:text-white transition-colors"><FaTimes /></button>
+          <h3 className="text-[var(--foreground)] font-extrabold">Crop image</h3>
+          <button onClick={onCancel} className="w-8 h-8 flex items-center justify-center rounded-full text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface)] transition-colors"><FaTimes /></button>
         </div>
 
         <canvas
@@ -217,24 +217,24 @@ export default function CropModal({
           onTouchEnd={() => setIsDragging(false)}
         />
 
-        <p className="text-[10px] text-slate-600 uppercase tracking-widest">Drag to reposition</p>
+        <p className="text-[11px] font-bold text-[var(--faint)] uppercase tracking-wide">Drag to reposition</p>
 
         {/* Zoom Slider */}
         <div className="flex items-center gap-3 w-full">
-          <button onClick={() => setScale(s => Math.max(minScale, s - (maxScale - minScale) * 0.05))} className="text-slate-400 hover:text-white"><FaSearchMinus size={14} /></button>
+          <button onClick={() => setScale(s => Math.max(minScale, s - (maxScale - minScale) * 0.05))} className="text-[var(--muted)] hover:text-[var(--foreground)]"><FaSearchMinus size={14} /></button>
           <input
             type="range" min={minScale} max={maxScale} step={(maxScale - minScale) / 100}
             value={scale}
             onChange={e => setScale(parseFloat(e.target.value))}
-            className="flex-1 accent-sky-500"
+            className="flex-1 accent-[var(--accent-strong)]"
           />
-          <button onClick={() => setScale(s => Math.min(maxScale, s + (maxScale - minScale) * 0.05))} className="text-slate-400 hover:text-white"><FaSearchPlus size={14} /></button>
+          <button onClick={() => setScale(s => Math.min(maxScale, s + (maxScale - minScale) * 0.05))} className="text-[var(--muted)] hover:text-[var(--foreground)]"><FaSearchPlus size={14} /></button>
         </div>
 
         <div className="flex gap-3 w-full">
-          <button onClick={onCancel} className="flex-1 py-2.5 bg-slate-800 text-slate-300 rounded-xl text-sm font-medium hover:bg-slate-700 transition-all">Cancel</button>
-          <button onClick={handleConfirm} className="flex-1 py-2.5 bg-sky-500 text-white rounded-xl text-sm font-bold hover:bg-sky-400 transition-all flex items-center justify-center gap-2">
-            <FaCheck size={12} /> Apply Crop
+          <button onClick={onCancel} className="flex-1 py-2.5 bg-white border border-[var(--border)] text-[var(--foreground)] rounded-full text-sm font-bold hover:bg-[var(--surface)] transition-all">Cancel</button>
+          <button onClick={handleConfirm} className="btn-tactile flex-1 py-2.5 bg-[var(--accent)] text-[var(--accent-ink)] rounded-full text-sm font-extrabold hover:bg-[var(--accent-strong)] transition-all flex items-center justify-center gap-2">
+            <FaCheck size={12} /> Apply crop
           </button>
         </div>
       </div>

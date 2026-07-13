@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
 import PageTransition from "@/components/PageTransition";
 import Button from "@/components/Button";
+import Container from "@/components/Container";
 import Image from "next/image";
 import { useProfile } from "@/context/ProfileContext";
 import { supabase } from "@/lib/supabase";
@@ -14,7 +15,7 @@ import {
   SiK6,
   SiBurpsuite
 } from "react-icons/si";
-import { FaFileDownload, FaCode, FaGithub, FaLinkedin, FaEnvelope } from "react-icons/fa";
+import { FaFileDownload, FaCode, FaGithub, FaLinkedin, FaEnvelope, FaExternalLinkAlt } from "react-icons/fa";
 import Link from "next/link";
 import { parseBio, sortItems, downloadFile } from "@/lib/utils";
 
@@ -91,157 +92,158 @@ export default function About() {
 
   return (
     <PageTransition>
-      <div className="max-w-5xl mx-auto px-6 py-12 md:py-20 relative overflow-hidden">
-        <div className="absolute inset-0 tech-grid opacity-[0.02] pointer-events-none" />
-        
-        <div className="flex flex-col items-center mb-20 md:mb-24">
-          <div className="relative w-24 h-24 md:w-32 md:h-32 mb-8 rounded-[2rem] overflow-hidden bg-slate-900 border border-slate-800 p-1 shadow-2xl flex items-center justify-center">
-            <div className={`absolute inset-0 bg-slate-800 flex items-center justify-center transition-opacity duration-1000 ${imageLoaded ? 'opacity-0 pointer-events-none' : 'opacity-100 animate-pulse'}`}>
-               <div className="w-full h-full bg-slate-800 rounded-[1.8rem]" />
-            </div>
-
-            <div className={`w-full h-full rounded-[1.8rem] overflow-hidden relative transition-opacity duration-1000 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}>
-              {(profile?.photo_url || contextProfile?.photo_url) && (
-                <Image
-                  src={profile?.photo_url || contextProfile?.photo_url || "/profile.png"}
-                  alt="Profile Photo"
-                  fill
-                  className="object-cover"
-                  priority
-                  onLoad={() => setImageLoaded(true)}
-                />
-              )}
+      <div className="absolute inset-x-0 top-0 h-[420px] warm-glow pointer-events-none -z-10" />
+      <Container className="py-16 md:py-24 relative">
+        <div className="flex flex-col items-center mb-20 md:mb-24 text-center">
+          <div className="relative mb-8">
+            <div className="absolute -inset-2 bg-[var(--accent)] rounded-[1.6rem] rotate-[-4deg]" />
+            <div className="relative w-24 h-24 md:w-28 md:h-28 rounded-3xl overflow-hidden bg-[var(--surface-2)] border border-[var(--border)] flex items-center justify-center shadow-[var(--shadow)]">
+              <div className={`absolute inset-0 bg-[var(--surface-2)] transition-opacity duration-1000 ${imageLoaded ? 'opacity-0 pointer-events-none' : 'opacity-100 animate-pulse-soft'}`} />
+              <div className={`w-full h-full overflow-hidden relative transition-opacity duration-1000 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}>
+                {(profile?.photo_url || contextProfile?.photo_url) && (
+                  <Image
+                    src={profile?.photo_url || contextProfile?.photo_url || "/profile.png"}
+                    alt="Profile Photo"
+                    fill
+                    className="object-cover"
+                    priority
+                    onLoad={() => setImageLoaded(true)}
+                  />
+                )}
+              </div>
             </div>
           </div>
-          <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-center text-white">
-            About <span className="text-sky-500 font-mono text-sm align-middle ml-2 tracking-[0.3em]">ENGINEER</span>
+          <span className="tag mb-4">👋 About me</span>
+          <h1 className="text-4xl md:text-6xl font-black tracking-tight text-[var(--foreground)]">
+            The person behind <br className="hidden md:block" />the <span className="marker">green checkmarks.</span>
           </h1>
         </div>
 
-        <div className="flex flex-col lg:flex-row gap-12 lg:gap-16 mb-24">
-          <div className="space-y-6 text-base md:text-lg text-white/50 leading-relaxed font-light lg:w-1/2">
+        <div className="flex flex-col lg:flex-row gap-12 lg:gap-16 mb-24 items-center">
+          <div className="space-y-6 lg:w-1/2">
             {isLoading || !cleanBio ? (
               <div className="space-y-3 animate-pulse">
-                <div className="h-6 bg-white/5 rounded-xl w-full" />
-                <div className="h-6 bg-white/5 rounded-xl w-5/6" />
-                <div className="h-6 bg-white/5 rounded-xl w-4/6" />
+                <div className="h-6 bg-[var(--surface-2)] rounded-xl w-full" />
+                <div className="h-6 bg-[var(--surface-2)] rounded-xl w-5/6" />
+                <div className="h-6 bg-[var(--surface-2)] rounded-xl w-4/6" />
               </div>
             ) : (
-              <p className="text-base text-slate-300 font-light !leading-relaxed">
+              <p className="text-base md:text-lg text-[var(--muted)] leading-relaxed font-medium">
                 {cleanBio}
               </p>
             )}
-            
-            <div className="pt-8 flex flex-wrap gap-8 items-center">
-              <Button 
-                variant="primary" 
+
+            <div className="pt-6 flex flex-wrap gap-6 items-center">
+              <Button
+                variant="primary"
                 onClick={() => {
                   const url = profile?.cv_url || "/paras-cv.pdf";
                   downloadFile(url, cvFilename || "Paras_Oli_CV.pdf");
-                }} 
-                className="h-14 px-8 rounded-xl bg-white text-black hover:bg-slate-200"
+                }}
               >
-                <FaFileDownload className="mr-3" /> {cvFilename || "Technical_CV.pdf"}
+                <FaFileDownload /> {cvFilename || "Download CV"}
               </Button>
-              <div className="flex items-center gap-6">
+              <div className="flex items-center gap-2">
                 {profile?.github_url && (
-                  <a href={profile.github_url} target="_blank" rel="noreferrer" className="text-slate-500 hover:text-white transition-all transform hover:scale-110">
-                    <FaGithub size={24} />
+                  <a href={profile.github_url} target="_blank" rel="noreferrer" className="w-10 h-10 flex items-center justify-center rounded-full text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface)] transition-colors">
+                    <FaGithub size={22} />
                   </a>
                 )}
                 {profile?.linkedin_url && (
-                  <a href={profile.linkedin_url} target="_blank" rel="noreferrer" className="text-slate-500 hover:text-white transition-all transform hover:scale-110">
-                    <FaLinkedin size={24} />
+                  <a href={profile.linkedin_url} target="_blank" rel="noreferrer" className="w-10 h-10 flex items-center justify-center rounded-full text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface)] transition-colors">
+                    <FaLinkedin size={22} />
                   </a>
                 )}
                 {email && (
-                  <a href={`mailto:${email}`} className="text-slate-500 hover:text-white transition-all transform hover:scale-110">
-                    <FaEnvelope size={24} />
+                  <a href={`mailto:${email}`} className="w-10 h-10 flex items-center justify-center rounded-full text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface)] transition-colors">
+                    <FaEnvelope size={22} />
                   </a>
                 )}
               </div>
             </div>
           </div>
 
-          <div className="bg-slate-900/40 border border-slate-800 p-10 md:p-14 rounded-[3rem] lg:w-1/2 flex flex-col justify-center relative">
-            <h2 className="text-[10px] font-bold tracking-[0.4em] mb-12 text-center text-slate-500 uppercase">CORE_TECH_STACK</h2>
-            <div className="grid grid-cols-3 gap-10">
+          <div className="card p-8 md:p-10 lg:w-1/2 flex flex-col justify-center">
+            <h2 className="text-xs font-extrabold mb-8 text-[var(--faint)] uppercase tracking-wider flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent)]" /> Core tech stack
+            </h2>
+            <div className="grid grid-cols-3 gap-4">
               {tools.map((tool) => (
-                <div key={tool.name} className="flex flex-col items-center justify-center gap-4 group">
-                  <div className="p-4 bg-slate-900 border border-slate-800 rounded-2xl group-hover:border-sky-500/30 transition-all text-slate-400 group-hover:text-white group-hover:shadow-lg">
+                <div key={tool.name} className="flex flex-col items-center justify-center gap-3 group p-4 rounded-2xl hover:bg-[var(--surface)] transition-colors">
+                  <div className="text-[var(--foreground)] group-hover:text-[var(--accent-strong)] group-hover:scale-110 transition-all">
                     {tool.icon}
                   </div>
-                  <span className="text-[9px] font-bold tracking-widest text-center uppercase text-slate-600 font-mono">{tool.name}</span>
+                  <span className="text-[11px] font-bold text-center text-[var(--muted)]">{tool.name}</span>
                 </div>
               ))}
             </div>
           </div>
         </div>
 
-        <div className="grid lg:grid-cols-2 gap-16 lg:gap-24 mt-20 relative">
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-px h-full bg-gradient-to-b from-white/10 via-white/5 to-transparent hidden lg:block" />
-          
+        <div className="grid lg:grid-cols-2 gap-14 lg:gap-20 mt-20 relative">
           <div className="flex flex-col">
-            <h2 className="text-3xl font-bold tracking-tight mb-14 text-white">Professional Experience</h2>
-            <div className="space-y-12 flex-grow">
+            <h2 className="text-2xl md:text-3xl font-black tracking-tight mb-10 text-[var(--foreground)]">Experience</h2>
+            <div className="space-y-6 flex-grow">
               {isLoading ? (
-                <div className="animate-pulse space-y-8">{[1,2].map(i => <div key={i} className="h-24 bg-white/5 rounded-2xl" />)}</div>
+                <div className="animate-pulse space-y-6">{[1,2].map(i => <div key={i} className="h-28 bg-[var(--surface-2)] rounded-2xl" />)}</div>
               ) : experience.length > 0 ? (
                 experience.map((job, index) => (
-                  <motion.div key={index} initial={{ opacity: 0, x: -20 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} className="relative pl-8 border-l border-[var(--neon-cyan)]/20">
-                    <div className="absolute w-2 h-2 bg-sky-500 rounded-full -left-[4.5px] top-2 shadow-[0_0_10px_rgba(14,165,233,0.5)]" />
-                    <h3 className="text-xl font-bold text-white mb-2">{job.role}</h3>
-                    <div className="text-sky-400 text-[10px] font-bold uppercase tracking-[0.2em] mb-5 font-mono">{job.company} <span className="mx-2 text-slate-700">|</span> {job.duration}</div>
-                    <p className="text-white/40 text-sm md:text-base font-light leading-relaxed">{job.description}</p>
+                  <motion.div key={index} initial={{ opacity: 0, x: -20 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} className="card card-hover p-6">
+                    <div className="flex items-start gap-2 mb-3">
+                      <span className="mt-1.5 w-2 h-2 rounded-full bg-[var(--accent)] shrink-0" />
+                      <h3 className="text-lg font-extrabold text-[var(--foreground)]">{job.role}</h3>
+                    </div>
+                    <div className="text-[var(--muted)] text-xs font-extrabold uppercase tracking-wide mb-3 pl-4">{job.company} <span className="mx-1.5 text-[var(--faint)]">·</span> {job.duration}</div>
+                    <p className="text-[var(--muted)] text-sm md:text-base leading-relaxed font-medium pl-4">{job.description}</p>
                   </motion.div>
                 ))
               ) : (
-                <p className="text-white/20 italic">No operational data available.</p>
+                <p className="text-[var(--faint)] italic font-medium">No experience listed yet.</p>
               )}
             </div>
           </div>
 
           <div className="flex flex-col">
-            <h2 className="text-3xl font-bold tracking-tight mb-14 text-white">Certifications <span className="text-sky-500">&</span> Licenses</h2>
-            <div className="flex flex-col gap-5 flex-grow">
+            <h2 className="text-2xl md:text-3xl font-black tracking-tight mb-10 text-[var(--foreground)]">Certifications <span className="text-[var(--accent-strong)]">&</span> licenses</h2>
+            <div className="flex flex-col gap-3 flex-grow">
               {isLoading ? (
-                <div className="animate-pulse space-y-4">{[1,2,3].map(i => <div key={i} className="h-16 bg-white/5 rounded-2xl" />)}</div>
+                <div className="animate-pulse space-y-3">{[1,2,3].map(i => <div key={i} className="h-16 bg-[var(--surface-2)] rounded-2xl" />)}</div>
               ) : certs.length > 0 ? (
                 certs.map((cert, index) => {
                   const issuer = getIssuerInfo(cert.name, cert.certification_url);
                   return (
-                    <Link 
-                      key={index} 
-                      href={cert.certification_url || "#"} 
-                      target="_blank" 
-                      className="bg-slate-900 border border-slate-800 p-5 rounded-2xl flex items-center justify-between group hover:border-sky-500/30 transition-all hover:bg-slate-800/50"
+                    <Link
+                      key={index}
+                      href={cert.certification_url || "#"}
+                      target="_blank"
+                      className="card card-hover p-4 flex items-center justify-between group"
                     >
-                      <div className="flex items-center gap-5">
-                        <div className="w-12 h-12 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-center overflow-hidden p-2 group-hover:border-sky-500/20 transition-all">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-2xl bg-[var(--surface)] border border-[var(--border)] flex items-center justify-center overflow-hidden p-2 shrink-0">
                           {issuer.icon ? (
-                            <img src={issuer.icon} alt={issuer.label} className="w-full h-full object-contain filter grayscale group-hover:grayscale-0 transition-all scale-110" />
+                            <img src={issuer.icon} alt={issuer.label} className="w-full h-full object-contain scale-110" />
                           ) : (
-                            <span className="text-sky-500 font-bold text-lg">{index + 1}</span>
+                            <span className="text-[var(--accent-strong)] font-black text-lg">{index + 1}</span>
                           )}
                         </div>
                         <div>
-                          <p className="text-white font-medium text-sm group-hover:text-sky-400 transition-colors line-clamp-1">{cert.name}</p>
-                          <p className="text-[9px] text-slate-600 font-mono tracking-widest mt-1 uppercase">{issuer.label}_AUTHENTICATED</p>
+                          <p className="text-[var(--foreground)] font-extrabold text-sm line-clamp-1">{cert.name}</p>
+                          <p className="text-xs text-[var(--faint)] font-bold mt-0.5">{issuer.label} · Verified ✓</p>
                         </div>
                       </div>
-                      <div className="w-8 h-8 rounded-full border border-white/5 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all -translate-x-4 group-hover:translate-x-0">
-                        <FaCode size={10} className="text-sky-500" />
+                      <div className="w-8 h-8 rounded-full bg-[var(--surface)] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all -translate-x-2 group-hover:translate-x-0 shrink-0">
+                        <FaExternalLinkAlt size={10} className="text-[var(--accent-strong)]" />
                       </div>
                     </Link>
                   );
                 })
               ) : (
-                <p className="text-white/20 italic">No certifications listed.</p>
+                <p className="text-[var(--faint)] italic font-medium">No certifications listed.</p>
               )}
             </div>
           </div>
         </div>
-      </div>
+      </Container>
     </PageTransition>
   );
 }

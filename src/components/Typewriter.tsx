@@ -23,7 +23,8 @@ export default function Typewriter({
   const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
-    const word = words[currentWordIndex];
+    if (!words || words.length === 0) return;
+    const word = words[currentWordIndex] ?? "";
     let timeout: NodeJS.Timeout;
 
     if (isDeleting) {
@@ -52,11 +53,11 @@ export default function Typewriter({
 
   return (
     <span className="relative">
-      <span className="text-[var(--neon-cyan)] neon-text">{currentText}</span>
+      <span className="text-[var(--foreground)]">{currentText}</span>
       <motion.span
         animate={{ opacity: [1, 0] }}
         transition={{ duration: 0.5, repeat: Infinity, ease: "linear" }}
-        className="inline-block w-[2px] h-[1em] bg-[var(--neon-cyan)] ml-1 translate-y-[2px]"
+        className="inline-block w-[3px] h-[1em] bg-[var(--accent-strong)] ml-1 translate-y-[2px] rounded-full"
       />
     </span>
   );

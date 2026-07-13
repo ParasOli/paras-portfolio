@@ -3,11 +3,12 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import PageTransition from "@/components/PageTransition";
+import Logo from "@/components/Logo";
 import { supabase } from "@/lib/supabase";
 import CropModal from "@/components/CropModal";
-import { 
-  FaPlus, FaTrash, FaEdit, FaSignOutAlt, FaImage, 
-  FaEnvelope, FaUser, FaBriefcase, FaCertificate, 
+import {
+  FaPlus, FaTrash, FaEdit, FaSignOutAlt, FaImage,
+  FaEnvelope, FaUser, FaBriefcase, FaCertificate,
   FaCog, FaFilePdf, FaGripVertical
 } from "react-icons/fa";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
@@ -18,13 +19,24 @@ interface Certification { id: any; name: string; certification_url: string; }
 interface Profile { id: any; full_name: string; bio: string; photo_url: string; cv_url: string; github_url: string; linkedin_url: string; }
 interface Message { id: any; name: string; email: string; message: string; is_read: boolean; created_at: string; }
 
+// Module-scope so its identity is stable across renders (inline components would
+// remount on every keystroke and drop input focus).
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <label className="field-label">{label}</label>
+      {children}
+    </div>
+  );
+}
+
 export default function AdminPage() {
   const [activeTab, setActiveTab] = useState<"projects" | "experience" | "certs" | "profile" | "messages">("projects");
   const [isLoading, setIsLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
   const [authChecking, setAuthChecking] = useState(true);
   const router = useRouter();
-  
+
   const [projects, setProjects] = useState<Project[]>([]);
   const [experience, setExperience] = useState<Experience[]>([]);
   const [certs, setCerts] = useState<Certification[]>([]);
@@ -51,15 +63,15 @@ export default function AdminPage() {
   const [liveUrl, setLiveUrl] = useState("");
   const [projectType, setProjectType] = useState("project");
   const [toolsUsed, setToolsUsed] = useState("");
-  
+
   const [role, setRole] = useState("");
   const [company, setCompany] = useState("");
   const [duration, setDuration] = useState("");
   const [expDescription, setExpDescription] = useState("");
-  
+
   const [certName, setCertName] = useState("");
   const [certUrl, setCertUrl] = useState("");
-  
+
   const [fullName, setFullName] = useState("");
   const [bio, setBio] = useState("");
   const [photoUrl, setPhotoUrl] = useState("");
@@ -129,7 +141,7 @@ export default function AdminPage() {
     setCerts(sortItems(cRes.data || [], ordCertsIds));
     setProfile(prRes.data || null);
     setMessages(mRes.data || []);
-    
+
     if (prRes.data) {
       setFullName(prRes.data.full_name || "");
       setPhotoUrl(prRes.data.photo_url || "");
@@ -137,7 +149,7 @@ export default function AdminPage() {
       setProfileGithub(prRes.data.github_url || "");
       setProfileLinkedin(prRes.data.linkedin_url || "");
       const fullBio = prRes.data.bio || "";
-      
+
       const termMatch = fullBio.match(/\[terms:(.*?)\]/);
       setTypingTerms(termMatch ? termMatch[1] : "");
       const chatMatch = fullBio.match(/\[chat:(.*?)\]/);
@@ -197,7 +209,7 @@ export default function AdminPage() {
       const ext = blob instanceof File ? (blob.name.split(".").pop() || "jpg") : "jpg";
       const fileName = `${Date.now()}.${ext}`;
       const filePath = `${pathPrefix}/${fileName}`;
-      
+
       const { error } = await supabase.storage.from(bucket).upload(filePath, blob);
       if (error) throw error;
 
@@ -291,7 +303,7 @@ export default function AdminPage() {
     try {
       const isUpdating = isEditing || (activeTab === "profile" && profile);
       const id = activeTab === "profile" ? profile?.id : currentId;
-      
+
       if (isUpdating) {
         const { error } = await supabase.from(table).update(data).eq("id", id);
         if (error) throw error;
@@ -343,17 +355,17 @@ export default function AdminPage() {
 
   if (authChecking) {
     return (
-      <div className="min-h-screen bg-[#020617] flex items-center justify-center">
-        <div className="w-12 h-12 border-4 border-sky-500 border-t-transparent rounded-full animate-spin"></div>
+      <div className="min-h-screen bg-[var(--background)] flex items-center justify-center">
+        <div className="w-12 h-12 border-4 border-[var(--border)] border-t-[var(--accent)] rounded-full animate-spin"></div>
       </div>
     );
   }
 
   const SidebarItem = ({ id, label, icon: Icon }: any) => (
-    <button onClick={() => { setActiveTab(id); resetForm(); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === id ? "bg-white/10 text-white" : "text-slate-400 hover:text-white"}`}>
-      <Icon size={18} className={activeTab === id ? "text-sky-400" : ""} />
-      <span className="text-sm font-medium">{label}</span>
-      {id === "messages" && messages.some(m => !m.is_read) && <div className="ml-auto w-2 h-2 bg-sky-500 rounded-full" />}
+    <button onClick={() => { setActiveTab(id); resetForm(); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl font-bold transition-all ${activeTab === id ? "bg-[var(--accent-soft)] text-[var(--foreground)]" : "text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface)]"}`}>
+      <Icon size={18} className={activeTab === id ? "text-[var(--accent-strong)]" : "text-[var(--faint)]"} />
+      <span className="text-sm">{label}</span>
+      {id === "messages" && messages.some(m => !m.is_read) && <div className="ml-auto w-2 h-2 bg-[var(--accent-strong)] rounded-full" />}
     </button>
   );
 
@@ -368,9 +380,11 @@ export default function AdminPage() {
           onCancel={() => { setCropSrc(null); setCropTarget(null); }}
         />
       )}
-      <div className="flex min-h-screen bg-[#020617] text-slate-200">
-        <aside className="w-64 border-r border-slate-800 p-6 flex flex-col shrink-0">
-          <div className="flex items-center gap-3 mb-10 px-2 font-bold text-lg text-white">Console<span className="text-sky-500">.v1</span></div>
+      <div className="flex min-h-screen bg-[var(--background)] text-[var(--foreground)]">
+        <aside className="w-64 border-r border-[var(--border)] bg-white p-6 flex flex-col shrink-0">
+          <div className="mb-10 px-1">
+            <Logo size={36} withWordmark />
+          </div>
           <div className="space-y-1 mb-auto">
             <SidebarItem id="projects" label="Works" icon={FaBriefcase} />
             <SidebarItem id="experience" label="Experience" icon={FaUser} />
@@ -378,160 +392,229 @@ export default function AdminPage() {
             <SidebarItem id="profile" label="Settings" icon={FaCog} />
             <SidebarItem id="messages" label="Inbox" icon={FaEnvelope} />
           </div>
-          <button onClick={handleLogout} className="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 hover:text-red-400 transition-all mt-8"><FaSignOutAlt size={18} /><span>Sign Out</span></button>
+          <button onClick={handleLogout} className="flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-[var(--faint)] hover:text-red-500 hover:bg-red-50 transition-all mt-8"><FaSignOutAlt size={18} /><span className="text-sm">Sign Out</span></button>
         </aside>
 
-        <main className="flex-1 p-10 overflow-y-auto max-w-6xl mx-auto">
-          <div className="flex justify-between items-center mb-10">
-            <h1 className="text-3xl font-bold text-white capitalize">{activeTab}</h1>
-            {activeTab !== "messages" && activeTab !== "profile" && !isEditing && !isAdding && (
-              <button onClick={() => setIsAdding(true)} className="bg-sky-500 text-slate-950 font-bold px-5 py-2.5 rounded-xl text-sm">Add New</button>
-            )}
-          </div>
-
-          {(isEditing || isAdding || activeTab === "profile") && (
-            <div className="bg-slate-900/40 border border-white/5 p-8 rounded-3xl backdrop-blur-sm">
-              <form onSubmit={handleSubmit} className="space-y-6">
-                {activeTab === "projects" && (
-                  <div className="grid md:grid-cols-2 gap-8">
-                    <div className="space-y-4">
-                      <input type="text" required value={title} onChange={e => setTitle(e.target.value)} className="saas-input" placeholder="Title" />
-                      <select value={projectType} onChange={e => setProjectType(e.target.value)} className="saas-input">
-                        <option value="project">Project</option><option value="writeup">Writeup</option>
-                      </select>
-                      <input type="url" value={githubUrl} onChange={e => setGithubUrl(e.target.value)} className="saas-input" placeholder="GitHub" />
-                      <input type="url" value={liveUrl} onChange={e => setLiveUrl(e.target.value)} className="saas-input" placeholder="Live Demo" />
-                      <input type="text" value={toolsUsed} onChange={e => setToolsUsed(e.target.value)} className="saas-input" placeholder="Tools used (comma-separated, e.g. Cypress, Postman)" />
-                    </div>
-                    <div className="space-y-4">
-                      <textarea required rows={4} value={description} onChange={e => setDescription(e.target.value)} className="saas-input" placeholder="Description" />
-                      <div className="grid grid-cols-3 gap-3">
-                        {imageUrls.map((url, i) => (
-                          <div key={i} className="relative aspect-video rounded-xl overflow-hidden group border border-white/5">
-                            <img src={url} className="w-full h-full object-cover" />
-                            <button onClick={() => setImageUrls(imageUrls.filter((_, idx) => idx !== i))} className="absolute inset-0 bg-red-500/80 flex items-center justify-center opacity-0 group-hover:opacity-100"><FaTrash size={12} /></button>
-                          </div>
-                        ))}
-                        <button type="button" onClick={() => fileInputRef.current?.click()} className="aspect-video border-2 border-dashed border-white/10 rounded-xl flex items-center justify-center text-slate-500"><FaPlus /></button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-                {activeTab === "experience" && (
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <input type="text" required value={role} onChange={e => setRole(e.target.value)} className="saas-input" placeholder="Role" />
-                    <input type="text" required value={company} onChange={e => setCompany(e.target.value)} className="saas-input" placeholder="Company" />
-                    <input type="text" required value={duration} onChange={e => setDuration(e.target.value)} className="saas-input" placeholder="Duration" />
-                    <textarea required rows={4} value={expDescription} onChange={e => setExpDescription(e.target.value)} className="saas-input" placeholder="Key Achievements" />
-                  </div>
-                )}
-                {activeTab === "certs" && (
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <input type="text" required value={certName} onChange={e => setCertName(e.target.value)} className="saas-input" placeholder="Cert Name" />
-                    <input type="url" value={certUrl} onChange={e => setCertUrl(e.target.value)} className="saas-input" placeholder="Cert URL" />
-                  </div>
-                )}
-                {activeTab === "profile" && (
-                  <div className="space-y-8">
-                    <div className="flex gap-8">
-                      <div className="text-center">
-                        <div onClick={() => avatarInputRef.current?.click()} className="w-24 h-24 rounded-2xl bg-slate-950 border border-white/5 mx-auto cursor-pointer relative group overflow-hidden">
-                          {photoUrl ? <img src={photoUrl} className="w-full h-full object-cover" /> : <FaImage className="m-auto absolute inset-0 text-slate-700" size={24} />}
-                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all"><FaEdit size={16} /></div>
-                        </div>
-                        <p className="text-[10px] text-slate-600 uppercase mt-2">Avatar</p>
-                      </div>
-                      <div className="flex-1 space-y-4">
-                        <input type="text" required value={fullName} onChange={e => setFullName(e.target.value)} className="saas-input" placeholder="Full Name" />
-                        <div onClick={() => cvInputRef.current?.click()} className="px-4 py-2.5 bg-slate-950 border border-white/5 rounded-xl text-xs text-slate-400 cursor-pointer flex items-center gap-2"><FaFilePdf /> {cvUrl ? "Update CV" : "Upload CV"}</div>
-                      </div>
-                    </div>
-                    <div className="grid md:grid-cols-2 gap-4 mt-4">
-                      <textarea rows={4} value={bio} onChange={e => setBio(e.target.value)} className="saas-input" placeholder="Bio" />
-                      <div className="space-y-4">
-                        <input type="url" value={profileGithub} onChange={e => setProfileGithub(e.target.value)} className="saas-input" placeholder="GitHub" />
-                        <input type="url" value={profileLinkedin} onChange={e => setProfileLinkedin(e.target.value)} className="saas-input" placeholder="LinkedIn" />
-                      </div>
-                    </div>
-                    <div className="grid md:grid-cols-2 gap-4 border-t border-white/5 pt-6">
-                      <input type="text" value={chatbotName} onChange={e => setChatbotName(e.target.value)} className="saas-input" placeholder="Bot Name" />
-                      <input type="text" value={chatbotSubtitle} onChange={e => setChatbotSubtitle(e.target.value)} className="saas-input" placeholder="Bot Subtitle" />
-                      <input type="text" value={typingTerms} onChange={e => setTypingTerms(e.target.value)} className="saas-input" placeholder="Typewriter terms (comma-separated)" />
-                      <input type="text" value={cvFilename} onChange={e => setCvFilename(e.target.value)} className="saas-input" placeholder="CV download filename" />
-                    </div>
-                    <textarea rows={5} value={chatbotContext} onChange={e => setChatbotContext(e.target.value)} className="saas-input" placeholder="AI Intelligence Context" />
-                  </div>
-                )}
-                <div className="flex gap-3 mt-6">
-                  <button type="submit" disabled={isUploading || isLoading} className="px-10 h-11 bg-white text-black font-bold rounded-xl hover:bg-sky-400 transition-all">{isLoading ? "Saving..." : "Save Changes"}</button>
-                  {(isEditing || isAdding) && <button type="button" onClick={resetForm} className="px-6 h-11 bg-slate-800 rounded-xl">Dismiss</button>}
-                </div>
-              </form>
+        <main className="flex-1 p-8 md:p-10 overflow-y-auto">
+          <div className="max-w-5xl mx-auto">
+            <div className="flex justify-between items-center mb-8">
+              <h1 className="text-3xl font-black text-[var(--foreground)] capitalize">{activeTab}</h1>
+              {activeTab !== "messages" && activeTab !== "profile" && !isEditing && !isAdding && (
+                <button onClick={() => setIsAdding(true)} className="btn-tactile bg-[var(--accent)] text-[var(--accent-ink)] font-extrabold px-5 py-2.5 rounded-full text-sm flex items-center gap-2 hover:bg-[var(--accent-strong)]"><FaPlus size={12} /> Add new</button>
+              )}
             </div>
-          )}
 
-          <div className={`mt-10 space-y-4 ${activeTab === "profile" ? "hidden" : ""}`}>
-            {activeTab === "projects" && (
-              <DragDropContext onDragEnd={(r) => handleOnDragEnd(r, "projects")}>
-                <Droppable droppableId="projects">{(provided) => (
-                  <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-3">
-                    {projects.map((p, index) => (
-                      <Draggable key={p.id} draggableId={p.id.toString()} index={index}>{(provided) => (
-                        <div ref={provided.innerRef} {...provided.draggableProps} className="bg-slate-900 p-4 rounded-2xl flex items-center gap-4 border border-white/5 hover:border-sky-500/20 transition-all">
-                          <div {...provided.dragHandleProps} className="text-slate-600 hover:text-slate-400 cursor-grab px-1"><FaGripVertical size={14} /></div>
-                          <img src={p.image_url?.startsWith('[') ? JSON.parse(p.image_url)[0] : p.image_url} className="w-12 h-12 rounded-lg object-cover" />
-                          <div className="flex-1"><p className="font-bold text-sm text-white">{p.title}</p><p className="text-xs text-slate-500">{p.type}</p></div>
-                          <div className="flex gap-2"><button onClick={() => handleEdit(p)} className="p-2 text-slate-400"><FaEdit size={14} /></button><button onClick={() => handleDelete(p.id, "projects")} className="p-2 text-slate-400"><FaTrash size={14} /></button></div>
+            {(isEditing || isAdding || activeTab === "profile") && (
+              <div className="card p-6 md:p-8">
+                <form onSubmit={handleSubmit} className="space-y-6">
+                  {activeTab === "projects" && (
+                    <div className="grid md:grid-cols-2 gap-6">
+                      <div className="space-y-4">
+                        <Field label="Project title">
+                          <input type="text" required value={title} onChange={e => setTitle(e.target.value)} className="saas-input" placeholder="e.g. Prod Health Monitor" />
+                        </Field>
+                        <Field label="Type">
+                          <select value={projectType} onChange={e => setProjectType(e.target.value)} className="saas-input">
+                            <option value="project">Project</option><option value="writeup">Writeup</option>
+                          </select>
+                        </Field>
+                        <Field label="GitHub URL">
+                          <input type="url" value={githubUrl} onChange={e => setGithubUrl(e.target.value)} className="saas-input" placeholder="https://github.com/…" />
+                        </Field>
+                        <Field label="Live demo URL">
+                          <input type="url" value={liveUrl} onChange={e => setLiveUrl(e.target.value)} className="saas-input" placeholder="https://…" />
+                        </Field>
+                        <Field label="Tools used">
+                          <input type="text" value={toolsUsed} onChange={e => setToolsUsed(e.target.value)} className="saas-input" placeholder="Cypress, Postman, GitHub Actions" />
+                        </Field>
+                      </div>
+                      <div className="space-y-4">
+                        <Field label="Description">
+                          <textarea required rows={5} value={description} onChange={e => setDescription(e.target.value)} className="saas-input" placeholder="What the project does, your role, the impact…" />
+                        </Field>
+                        <div>
+                          <label className="field-label">Screenshots</label>
+                          <div className="grid grid-cols-3 gap-3">
+                            {imageUrls.map((url, i) => (
+                              <div key={i} className="relative aspect-video rounded-xl overflow-hidden group border border-[var(--border)]">
+                                <img src={url} className="w-full h-full object-cover" />
+                                <button type="button" onClick={() => setImageUrls(imageUrls.filter((_, idx) => idx !== i))} className="absolute inset-0 bg-red-500/80 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><FaTrash size={12} /></button>
+                              </div>
+                            ))}
+                            <button type="button" onClick={() => fileInputRef.current?.click()} className="aspect-video border-2 border-dashed border-[var(--border-strong)] rounded-xl flex items-center justify-center text-[var(--faint)] hover:border-[var(--accent-strong)] hover:text-[var(--accent-strong)] transition-colors"><FaPlus /></button>
+                          </div>
                         </div>
-                      )}</Draggable>
-                    ))}
-                    {provided.placeholder}
-                  </div>
-                )}</Droppable>
-              </DragDropContext>
-            )}
-            {activeTab === "experience" && (
-              <DragDropContext onDragEnd={(r) => handleOnDragEnd(r, "experience")}>
-                <Droppable droppableId="experience">{(provided) => (
-                  <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-3">
-                    {experience.map((exp, index) => (
-                      <Draggable key={exp.id} draggableId={exp.id.toString()} index={index}>{(provided) => (
-                        <div ref={provided.innerRef} {...provided.draggableProps} className="bg-slate-900 p-4 rounded-2xl flex items-center gap-4 border border-white/5 hover:border-sky-500/20 transition-all">
-                          <div {...provided.dragHandleProps} className="text-slate-600 hover:text-slate-400 cursor-grab px-1"><FaGripVertical size={14} /></div>
-                          <div className="flex-1"><p className="font-bold text-sm text-white">{exp.role}</p><p className="text-xs text-sky-400">{exp.company}</p></div>
-                          <div className="flex gap-2"><button onClick={() => handleEdit(exp)} className="p-2 text-slate-400"><FaEdit size={14} /></button><button onClick={() => handleDelete(exp.id, "experience")} className="p-2 text-slate-400"><FaTrash size={14} /></button></div>
+                      </div>
+                    </div>
+                  )}
+                  {activeTab === "experience" && (
+                    <div className="grid md:grid-cols-2 gap-5">
+                      <Field label="Role">
+                        <input type="text" required value={role} onChange={e => setRole(e.target.value)} className="saas-input" placeholder="e.g. QA Automation Engineer" />
+                      </Field>
+                      <Field label="Company">
+                        <input type="text" required value={company} onChange={e => setCompany(e.target.value)} className="saas-input" placeholder="e.g. Acme Inc." />
+                      </Field>
+                      <Field label="Duration">
+                        <input type="text" required value={duration} onChange={e => setDuration(e.target.value)} className="saas-input" placeholder="e.g. 2023 — Present" />
+                      </Field>
+                      <div className="md:col-span-2">
+                        <Field label="Key achievements">
+                          <textarea required rows={4} value={expDescription} onChange={e => setExpDescription(e.target.value)} className="saas-input" placeholder="What you built, owned, and improved…" />
+                        </Field>
+                      </div>
+                    </div>
+                  )}
+                  {activeTab === "certs" && (
+                    <div className="grid md:grid-cols-2 gap-5">
+                      <Field label="Certificate name">
+                        <input type="text" required value={certName} onChange={e => setCertName(e.target.value)} className="saas-input" placeholder="e.g. ISTQB Foundation Level" />
+                      </Field>
+                      <Field label="Certificate URL">
+                        <input type="url" value={certUrl} onChange={e => setCertUrl(e.target.value)} className="saas-input" placeholder="https://… (verification link)" />
+                      </Field>
+                    </div>
+                  )}
+                  {activeTab === "profile" && (
+                    <div className="space-y-8">
+                      <div className="flex gap-8">
+                        <div className="text-center">
+                          <div onClick={() => avatarInputRef.current?.click()} className="w-24 h-24 rounded-2xl bg-[var(--surface)] border border-[var(--border)] mx-auto cursor-pointer relative group overflow-hidden">
+                            {photoUrl ? <img src={photoUrl} className="w-full h-full object-cover" /> : <FaImage className="m-auto absolute inset-0 text-[var(--faint)]" size={24} />}
+                            <div className="absolute inset-0 bg-black/40 text-white opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all"><FaEdit size={16} /></div>
+                          </div>
+                          <p className="text-[10px] font-bold text-[var(--faint)] uppercase tracking-wide mt-2">Avatar</p>
                         </div>
-                      )}</Draggable>
-                    ))}
-                    {provided.placeholder}
-                  </div>
-                )}</Droppable>
-              </DragDropContext>
-            )}
-            {activeTab === "certs" && (
-              <DragDropContext onDragEnd={(r) => handleOnDragEnd(r, "certs")}>
-                <Droppable droppableId="certs">{(provided) => (
-                  <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-3">
-                    {certs.map((c, index) => (
-                      <Draggable key={c.id} draggableId={c.id.toString()} index={index}>{(provided) => (
-                        <div ref={provided.innerRef} {...provided.draggableProps} className="bg-slate-900 p-4 rounded-2xl flex items-center gap-4 border border-white/5 hover:border-sky-500/20 transition-all">
-                          <div {...provided.dragHandleProps} className="text-slate-600 hover:text-slate-400 cursor-grab px-1"><FaGripVertical size={14} /></div>
-                          <div className="flex-1"><p className="font-bold text-sm text-white">{c.name}</p></div>
-                          <div className="flex gap-2"><button onClick={() => handleEdit(c)} className="p-2 text-slate-400"><FaEdit size={14} /></button><button onClick={() => handleDelete(c.id, "certifications")} className="p-2 text-slate-400"><FaTrash size={14} /></button></div>
+                        <div className="flex-1 space-y-4">
+                          <Field label="Full name">
+                            <input type="text" required value={fullName} onChange={e => setFullName(e.target.value)} className="saas-input" placeholder="Paras Oli" />
+                          </Field>
+                          <div>
+                            <label className="field-label">Résumé / CV</label>
+                            <div onClick={() => cvInputRef.current?.click()} className="px-4 py-3 bg-white border-[1.5px] border-[var(--border-strong)] rounded-xl text-sm font-bold text-[var(--muted)] cursor-pointer flex items-center gap-2 hover:border-[var(--accent-strong)] transition-colors"><FaFilePdf /> {cvUrl ? "Update CV" : "Upload CV"}</div>
+                          </div>
                         </div>
-                      )}</Draggable>
-                    ))}
-                    {provided.placeholder}
+                      </div>
+                      <div className="grid md:grid-cols-2 gap-5 mt-4">
+                        <Field label="Bio">
+                          <textarea rows={4} value={bio} onChange={e => setBio(e.target.value)} className="saas-input" placeholder="Short intro shown on the homepage & about page" />
+                        </Field>
+                        <div className="space-y-4">
+                          <Field label="GitHub URL">
+                            <input type="url" value={profileGithub} onChange={e => setProfileGithub(e.target.value)} className="saas-input" placeholder="https://github.com/…" />
+                          </Field>
+                          <Field label="LinkedIn URL">
+                            <input type="url" value={profileLinkedin} onChange={e => setProfileLinkedin(e.target.value)} className="saas-input" placeholder="https://linkedin.com/in/…" />
+                          </Field>
+                        </div>
+                      </div>
+                      <div className="border-t border-[var(--border)] pt-6">
+                        <h3 className="text-sm font-black text-[var(--foreground)] mb-4">AI assistant & extras</h3>
+                        <div className="grid md:grid-cols-2 gap-5">
+                          <Field label="Bot name">
+                            <input type="text" value={chatbotName} onChange={e => setChatbotName(e.target.value)} className="saas-input" placeholder="Portfolio AI" />
+                          </Field>
+                          <Field label="Bot subtitle">
+                            <input type="text" value={chatbotSubtitle} onChange={e => setChatbotSubtitle(e.target.value)} className="saas-input" placeholder="AI Assistant" />
+                          </Field>
+                          <Field label="Typewriter terms">
+                            <input type="text" value={typingTerms} onChange={e => setTypingTerms(e.target.value)} className="saas-input" placeholder="Comma-separated, e.g. Cypress, API testing" />
+                          </Field>
+                          <Field label="CV download filename">
+                            <input type="text" value={cvFilename} onChange={e => setCvFilename(e.target.value)} className="saas-input" placeholder="Paras_Oli_CV.pdf" />
+                          </Field>
+                        </div>
+                        <div className="mt-5">
+                          <Field label="AI knowledge context">
+                            <textarea rows={5} value={chatbotContext} onChange={e => setChatbotContext(e.target.value)} className="saas-input" placeholder="Extra context the chatbot should know about you…" />
+                          </Field>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  <div className="flex gap-3 mt-6">
+                    <button type="submit" disabled={isUploading || isLoading} className="btn-tactile px-10 h-11 bg-[var(--accent)] text-[var(--accent-ink)] font-extrabold rounded-full hover:bg-[var(--accent-strong)] disabled:opacity-50">{isLoading ? "Saving..." : "Save Changes"}</button>
+                    {(isEditing || isAdding) && <button type="button" onClick={resetForm} className="px-6 h-11 bg-white border border-[var(--border)] text-[var(--foreground)] font-bold rounded-full hover:bg-[var(--surface)] transition-colors">Dismiss</button>}
                   </div>
-                )}</Droppable>
-              </DragDropContext>
-            )}
-            {activeTab === "messages" && messages.map(m => (
-              <div key={m.id} className="bg-slate-900 p-5 rounded-2xl">
-                <div className="flex justify-between items-start mb-2"><p className="font-bold text-white text-sm">{m.name}</p><button onClick={() => handleDelete(m.id, "messages")} className="text-slate-600"><FaTrash size={12} /></button></div>
-                <p className="text-xs text-slate-400">{m.message}</p>
+                </form>
               </div>
-            ))}
+            )}
+
+            <div className={`mt-8 space-y-3 ${activeTab === "profile" ? "hidden" : ""}`}>
+              {activeTab === "projects" && (
+                <DragDropContext onDragEnd={(r) => handleOnDragEnd(r, "projects")}>
+                  <Droppable droppableId="projects">{(provided) => (
+                    <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-3">
+                      {projects.map((p, index) => (
+                        <Draggable key={p.id} draggableId={p.id.toString()} index={index}>{(provided) => (
+                          <div ref={provided.innerRef} {...provided.draggableProps} className="card card-hover p-4 flex items-center gap-4">
+                            <div {...provided.dragHandleProps} className="text-[var(--faint)] hover:text-[var(--muted)] cursor-grab px-1"><FaGripVertical size={14} /></div>
+                            <img src={p.image_url?.startsWith('[') ? JSON.parse(p.image_url)[0] : p.image_url} className="w-12 h-12 rounded-xl object-cover bg-[var(--surface)]" />
+                            <div className="flex-1"><p className="font-extrabold text-sm text-[var(--foreground)]">{p.title}</p><p className="text-xs font-bold text-[var(--faint)] capitalize">{p.type}</p></div>
+                            <div className="flex gap-1"><button onClick={() => handleEdit(p)} className="p-2 rounded-lg text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface)]"><FaEdit size={14} /></button><button onClick={() => handleDelete(p.id, "projects")} className="p-2 rounded-lg text-[var(--muted)] hover:text-red-500 hover:bg-red-50"><FaTrash size={14} /></button></div>
+                          </div>
+                        )}</Draggable>
+                      ))}
+                      {provided.placeholder}
+                    </div>
+                  )}</Droppable>
+                </DragDropContext>
+              )}
+              {activeTab === "experience" && (
+                <DragDropContext onDragEnd={(r) => handleOnDragEnd(r, "experience")}>
+                  <Droppable droppableId="experience">{(provided) => (
+                    <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-3">
+                      {experience.map((exp, index) => (
+                        <Draggable key={exp.id} draggableId={exp.id.toString()} index={index}>{(provided) => (
+                          <div ref={provided.innerRef} {...provided.draggableProps} className="card card-hover p-4 flex items-center gap-4">
+                            <div {...provided.dragHandleProps} className="text-[var(--faint)] hover:text-[var(--muted)] cursor-grab px-1"><FaGripVertical size={14} /></div>
+                            <div className="flex-1"><p className="font-extrabold text-sm text-[var(--foreground)]">{exp.role}</p><p className="text-xs font-bold text-[var(--accent-strong)]">{exp.company}</p></div>
+                            <div className="flex gap-1"><button onClick={() => handleEdit(exp)} className="p-2 rounded-lg text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface)]"><FaEdit size={14} /></button><button onClick={() => handleDelete(exp.id, "experience")} className="p-2 rounded-lg text-[var(--muted)] hover:text-red-500 hover:bg-red-50"><FaTrash size={14} /></button></div>
+                          </div>
+                        )}</Draggable>
+                      ))}
+                      {provided.placeholder}
+                    </div>
+                  )}</Droppable>
+                </DragDropContext>
+              )}
+              {activeTab === "certs" && (
+                <DragDropContext onDragEnd={(r) => handleOnDragEnd(r, "certs")}>
+                  <Droppable droppableId="certs">{(provided) => (
+                    <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-3">
+                      {certs.map((c, index) => (
+                        <Draggable key={c.id} draggableId={c.id.toString()} index={index}>{(provided) => (
+                          <div ref={provided.innerRef} {...provided.draggableProps} className="card card-hover p-4 flex items-center gap-4">
+                            <div {...provided.dragHandleProps} className="text-[var(--faint)] hover:text-[var(--muted)] cursor-grab px-1"><FaGripVertical size={14} /></div>
+                            <div className="flex-1"><p className="font-extrabold text-sm text-[var(--foreground)]">{c.name}</p></div>
+                            <div className="flex gap-1"><button onClick={() => handleEdit(c)} className="p-2 rounded-lg text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface)]"><FaEdit size={14} /></button><button onClick={() => handleDelete(c.id, "certifications")} className="p-2 rounded-lg text-[var(--muted)] hover:text-red-500 hover:bg-red-50"><FaTrash size={14} /></button></div>
+                          </div>
+                        )}</Draggable>
+                      ))}
+                      {provided.placeholder}
+                    </div>
+                  )}</Droppable>
+                </DragDropContext>
+              )}
+              {activeTab === "messages" && (
+                messages.length > 0 ? messages.map(m => (
+                  <div key={m.id} className="card p-5">
+                    <div className="flex justify-between items-start mb-2">
+                      <div>
+                        <p className="font-extrabold text-[var(--foreground)] text-sm">{m.name}</p>
+                        <a href={`mailto:${m.email}`} className="text-xs font-bold text-[var(--accent-strong)] hover:underline">{m.email}</a>
+                      </div>
+                      <button onClick={() => handleDelete(m.id, "messages")} className="p-2 rounded-lg text-[var(--muted)] hover:text-red-500 hover:bg-red-50"><FaTrash size={12} /></button>
+                    </div>
+                    <p className="text-sm text-[var(--muted)] font-medium leading-relaxed">{m.message}</p>
+                  </div>
+                )) : (
+                  <div className="card p-12 text-center">
+                    <p className="text-[var(--faint)] font-bold text-sm">No messages yet. 📭</p>
+                  </div>
+                )
+              )}
+            </div>
           </div>
         </main>
 
@@ -553,10 +636,6 @@ export default function AdminPage() {
           }
         }} />
       </div>
-
-      <style jsx>{`
-        .saas-input { @apply w-full bg-slate-950/50 border border-white/5 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-sky-500/30 transition-all; }
-      `}</style>
     </PageTransition>
   );
 }
