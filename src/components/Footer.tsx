@@ -32,9 +32,9 @@ export default function Footer() {
             </Link>
           )}
           {email && (
-            <Link href={`mailto:${email}`} className="w-10 h-10 flex items-center justify-center rounded-full hover:text-[var(--foreground)] hover:bg-white transition-colors">
+            <a href={`mailto:${email}`} className="w-10 h-10 flex items-center justify-center rounded-full hover:text-[var(--foreground)] hover:bg-white transition-colors">
               <FaEnvelope size={20} />
-            </Link>
+            </a>
           )}
         </div>
       </Container>
