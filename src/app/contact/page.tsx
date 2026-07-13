@@ -1,24 +1,59 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import PageTransition from "@/components/PageTransition";
 import Button from "@/components/Button";
 import Container from "@/components/Container";
-import { FaGithub, FaLinkedin, FaEnvelope } from "react-icons/fa";
+import { FaGithub, FaLinkedin, FaEnvelope, FaPhone } from "react-icons/fa";
 import { useProfile } from "@/context/ProfileContext";
 import { parseBio } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
 
+const COOLDOWN_MS = 10 * 60 * 1000; // 10 minutes
+const STORAGE_KEY = "contact_last_sent";
+
+function formatMMSS(secs: number) {
+  const m = Math.floor(secs / 60);
+  const s = secs % 60;
+  return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
 export default function Contact() {
   const { profile } = useProfile();
   const { email } = parseBio(profile?.bio || "");
+  const phoneMatch = profile?.bio?.match(/\[phone:(.*?)\]/);
+  const phone = phoneMatch ? phoneMatch[1].trim() : "";
+
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [cooldownLeft, setCooldownLeft] = useState(0); // seconds
+
+  // Restore cooldown on mount (survives refresh) and tick every second.
+  useEffect(() => {
+    const tick = () => {
+      try {
+        const last = parseInt(localStorage.getItem(STORAGE_KEY) || "0", 10);
+        const remainingMs = last + COOLDOWN_MS - Date.now();
+        if (remainingMs > 0) {
+          setCooldownLeft(Math.ceil(remainingMs / 1000));
+          setSubmitted(true);
+        } else {
+          setCooldownLeft(0);
+        }
+      } catch {
+        setCooldownLeft(0);
+      }
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (cooldownLeft > 0) return; // guard against spam
     setLoading(true);
     setError(null);
 
@@ -42,9 +77,13 @@ export default function Contact() {
       } catch (err) {
         console.error("Email notification failed:", err);
       }
+      try {
+        localStorage.setItem(STORAGE_KEY, Date.now().toString());
+      } catch {}
+      setCooldownLeft(Math.ceil(COOLDOWN_MS / 1000));
       setSubmitted(true);
     } else {
-      setError("Something went wrong sending your message. Please try again or email me directly.");
+      setError("Something went wrong sending your message. Please try again or reach out directly below.");
     }
 
     setLoading(false);
@@ -98,12 +137,24 @@ export default function Contact() {
                   <h2 className="text-2xl font-black text-[var(--foreground)]">Message sent! 🎉</h2>
                   <p className="text-[var(--muted)] text-sm mt-2 font-medium">Thanks for reaching out — I&apos;ll get back to you shortly.</p>
                 </div>
-                <button
-                  onClick={() => setSubmitted(false)}
-                  className="text-sm font-extrabold text-[#92700c] hover:opacity-70 transition-opacity"
-                >
-                  Send another →
-                </button>
+
+                {cooldownLeft > 0 ? (
+                  <div className="inline-flex flex-col items-center gap-2">
+                    <div className="inline-flex items-center gap-2.5 px-5 py-3 rounded-full bg-[var(--surface)] border border-[var(--border)]">
+                      <span className="w-2 h-2 rounded-full bg-[var(--accent-strong)] animate-pulse-soft" />
+                      <span className="text-sm font-bold text-[var(--muted)]">You can send another in</span>
+                      <span className="text-sm font-black tabular-nums text-[var(--foreground)]">{formatMMSS(cooldownLeft)}</span>
+                    </div>
+                    <p className="text-xs font-medium text-[var(--faint)]">Need a faster reply? Reach out directly below 👇</p>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setSubmitted(false)}
+                    className="text-sm font-extrabold text-[#92700c] hover:opacity-70 transition-opacity"
+                  >
+                    Send another →
+                  </button>
+                )}
               </motion.div>
             ) : (
             <form onSubmit={handleSubmit} className="space-y-6">
@@ -151,35 +202,70 @@ export default function Contact() {
               </div>
 
               {error && (
-                <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
+                <p className="text-sm font-bold text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
                   {error}
                 </p>
               )}
 
               <Button variant="primary" type="submit" className="w-full py-4">
-                {loading ? "Sending..." : "Send Message"}
+                {loading ? "Sending..." : "Send message"}
               </Button>
             </form>
           )}
           </AnimatePresence>
         </div>
 
-        <div className="mt-16 flex justify-center gap-8 text-[var(--faint)]">
-          {email && (
-            <a href={`mailto:${email}`} className="hover:text-[var(--accent)] transition-colors duration-300">
-              <FaEnvelope size={24} />
-            </a>
-          )}
-          {profile?.github_url && (
-            <a href={profile.github_url} target="_blank" rel="noreferrer" className="hover:text-[var(--accent)] transition-colors duration-300">
-              <FaGithub size={24} />
-            </a>
-          )}
-          {profile?.linkedin_url && (
-            <a href={profile.linkedin_url} target="_blank" rel="noreferrer" className="hover:text-[var(--accent)] transition-colors duration-300">
-              <FaLinkedin size={24} />
-            </a>
-          )}
+        {/* Instant touch — direct channels for a faster reply */}
+        <div className="mt-10">
+          <p className="text-center text-xs font-extrabold uppercase tracking-wide text-[var(--faint)] mb-4">
+            Or reach me instantly
+          </p>
+          <div className="grid sm:grid-cols-3 gap-3">
+            {email && (
+              <a href={`mailto:${email}`} className="card card-hover p-4 flex items-center gap-3">
+                <span className="w-10 h-10 rounded-xl bg-[var(--accent-soft)] border border-[#f6e08a] flex items-center justify-center text-[#92700c] shrink-0">
+                  <FaEnvelope size={16} />
+                </span>
+                <span className="min-w-0">
+                  <span className="block text-xs font-bold text-[var(--faint)]">Email</span>
+                  <span className="block text-sm font-extrabold text-[var(--foreground)] truncate">{email}</span>
+                </span>
+              </a>
+            )}
+            {phone && (
+              <a href={`tel:${phone.replace(/\s+/g, "")}`} className="card card-hover p-4 flex items-center gap-3">
+                <span className="w-10 h-10 rounded-xl bg-[var(--pass-soft)] flex items-center justify-center text-[var(--pass)] shrink-0">
+                  <FaPhone size={15} />
+                </span>
+                <span className="min-w-0">
+                  <span className="block text-xs font-bold text-[var(--faint)]">Call</span>
+                  <span className="block text-sm font-extrabold text-[var(--foreground)] truncate">{phone}</span>
+                </span>
+              </a>
+            )}
+            {profile?.linkedin_url && (
+              <a href={profile.linkedin_url} target="_blank" rel="noreferrer" className="card card-hover p-4 flex items-center gap-3">
+                <span className="w-10 h-10 rounded-xl bg-[#e8f1fb] flex items-center justify-center text-[#0a66c2] shrink-0">
+                  <FaLinkedin size={16} />
+                </span>
+                <span className="min-w-0">
+                  <span className="block text-xs font-bold text-[var(--faint)]">LinkedIn</span>
+                  <span className="block text-sm font-extrabold text-[var(--foreground)] truncate">Message me</span>
+                </span>
+              </a>
+            )}
+            {profile?.github_url && !phone && (
+              <a href={profile.github_url} target="_blank" rel="noreferrer" className="card card-hover p-4 flex items-center gap-3">
+                <span className="w-10 h-10 rounded-xl bg-[var(--surface-2)] flex items-center justify-center text-[var(--foreground)] shrink-0">
+                  <FaGithub size={16} />
+                </span>
+                <span className="min-w-0">
+                  <span className="block text-xs font-bold text-[var(--faint)]">GitHub</span>
+                  <span className="block text-sm font-extrabold text-[var(--foreground)] truncate">See my code</span>
+                </span>
+              </a>
+            )}
+          </div>
         </div>
       </Container>
     </PageTransition>
