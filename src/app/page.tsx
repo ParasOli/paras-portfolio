@@ -140,7 +140,7 @@ export default function Home() {
               </Link>
               {profile?.cv_url && (
                 <button
-                  onClick={() => downloadFile(profile.cv_url!, cvFilename || "Paras_Oli_CV.pdf")}
+                  onClick={() => downloadFile(profile.cv_url!, cvFilename || "Paras_Oli_QA_Automation_Engineer_Resume.pdf")}
                   className="inline-flex h-12 px-5 bg-white border border-[var(--border)] rounded-full text-[var(--foreground)] font-bold hover:border-[var(--border-strong)] hover:bg-[var(--surface)] shadow-[var(--shadow-sm)] transition-all items-center gap-2"
                 >
                   <FaFileDownload size={14} /> Download CV

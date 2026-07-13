@@ -30,7 +30,7 @@ export const parseBio = (fullBio: string) => {
     chatbotContext: chatMatch ? chatMatch[1].trim() : "",
     chatbotName: chatNameMatch ? chatNameMatch[1].trim() : "Portfolio AI",
     chatbotSubtitle: chatSubMatch ? chatSubMatch[1].trim() : "Expert System v1.1",
-    cvFilename: cvFileMatch ? cvFileMatch[1].trim() : "Paras_Oli_CV.pdf",
+    cvFilename: cvFileMatch ? cvFileMatch[1].trim() : "Paras_Oli_QA_Automation_Engineer_Resume.pdf",
     email: emailMatch ? emailMatch[1].trim() : "",
     orderProjects: ordProjMatch ? ordProjMatch[1].split(",").filter(Boolean) : [],
     orderExperience: ordExpMatch ? ordExpMatch[1].split(",").filter(Boolean) : [],

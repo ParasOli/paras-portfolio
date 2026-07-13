@@ -138,10 +138,10 @@ export default function About() {
                 variant="primary"
                 onClick={() => {
                   const url = profile?.cv_url || "/paras-cv.pdf";
-                  downloadFile(url, cvFilename || "Paras_Oli_CV.pdf");
+                  downloadFile(url, cvFilename || "Paras_Oli_QA_Automation_Engineer_Resume.pdf");
                 }}
               >
-                <FaFileDownload /> {cvFilename || "Download CV"}
+                <FaFileDownload /> Download résumé
               </Button>
               <div className="flex items-center gap-2">
                 {profile?.github_url && (
