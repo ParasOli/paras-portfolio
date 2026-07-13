@@ -5,9 +5,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import PageTransition from "@/components/PageTransition";
 import Button from "@/components/Button";
 import Container from "@/components/Container";
-import { FaGithub, FaLinkedin, FaEnvelope, FaPhone } from "react-icons/fa";
+import { FaGithub, FaLinkedin, FaPhone, FaWhatsapp } from "react-icons/fa";
 import { useProfile } from "@/context/ProfileContext";
-import { parseBio } from "@/lib/utils";
 
 const COOLDOWN_MS = 10 * 60 * 1000; // 10 minutes
 const STORAGE_KEY = "contact_last_sent";
@@ -20,7 +19,6 @@ function formatMMSS(secs: number) {
 
 export default function Contact() {
   const { profile } = useProfile();
-  const { email } = parseBio(profile?.bio || "");
   const phoneMatch = profile?.bio?.match(/\[phone:(.*?)\]/);
   const phone = phoneMatch ? phoneMatch[1].trim() : "";
 
@@ -221,14 +219,14 @@ export default function Contact() {
             Or reach me instantly
           </p>
           <div className="grid sm:grid-cols-3 gap-3">
-            {email && (
-              <a href={`mailto:${email}`} className="card card-hover p-4 flex items-center gap-3">
-                <span className="w-10 h-10 rounded-xl bg-[var(--accent-soft)] border border-[#f6e08a] flex items-center justify-center text-[#92700c] shrink-0">
-                  <FaEnvelope size={16} />
+            {phone && (
+              <a href={`https://wa.me/${phone.replace(/\D/g, "")}`} target="_blank" rel="noreferrer" className="card card-hover p-4 flex items-center gap-3">
+                <span className="w-10 h-10 rounded-xl bg-[#e7f8ee] flex items-center justify-center text-[#25d366] shrink-0">
+                  <FaWhatsapp size={17} />
                 </span>
                 <span className="min-w-0">
-                  <span className="block text-xs font-bold text-[var(--faint)]">Email</span>
-                  <span className="block text-sm font-extrabold text-[var(--foreground)] truncate">{email}</span>
+                  <span className="block text-xs font-bold text-[var(--faint)]">WhatsApp</span>
+                  <span className="block text-sm font-extrabold text-[var(--foreground)] truncate">Chat now</span>
                 </span>
               </a>
             )}
