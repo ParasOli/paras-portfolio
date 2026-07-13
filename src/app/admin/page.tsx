@@ -79,6 +79,7 @@ export default function AdminPage() {
   const [profileGithub, setProfileGithub] = useState("");
   const [profileLinkedin, setProfileLinkedin] = useState("");
   const [typingEmail, setTypingEmail] = useState("");
+  const [typingPhone, setTypingPhone] = useState("");
   const [typingTerms, setTypingTerms] = useState("");
   const [chatbotContext, setChatbotContext] = useState("");
   const [chatbotName, setChatbotName] = useState("");
@@ -162,6 +163,8 @@ export default function AdminPage() {
       setCvFilename(cvFileMatch ? cvFileMatch[1] : "");
       const emailMatch = fullBio.match(/\[email:(.*?)\]/);
       setTypingEmail(emailMatch ? emailMatch[1] : "");
+      const phoneMatch = fullBio.match(/\[phone:(.*?)\]/);
+      setTypingPhone(phoneMatch ? phoneMatch[1] : "");
 
       setOrderProjects(ordProjIds);
       setOrderExperience(ordExpIds);
@@ -174,6 +177,7 @@ export default function AdminPage() {
         .replace(/\[chat_sub:.*?\]/g, "")
         .replace(/\[cv_file:.*?\]/g, "")
         .replace(/\[email:.*?\]/g, "")
+        .replace(/\[phone:.*?\]/g, "")
         .replace(/\[order_projects:.*?\]/g, "")
         .replace(/\[order_experience:.*?\]/g, "")
         .replace(/\[order_certs:.*?\]/g, "")
@@ -193,7 +197,7 @@ export default function AdminPage() {
     else if (type === "experience") { setExperience(items as Experience[]); setOrderExperience(newOrderIds); }
     else { setCerts(items as Certification[]); setOrderCerts(newOrderIds); }
     if (profile) {
-      const meta = `[terms:${typingTerms}] [chat:${chatbotContext}] [chat_name:${chatbotName}] [chat_sub:${chatbotSubtitle}] [cv_file:${cvFilename}] [email:${typingEmail}] [order_projects:${type === "projects" ? newOrderIds.join(",") : orderProjects.join(",")}] [order_experience:${type === "experience" ? newOrderIds.join(",") : orderExperience.join(",")}] [order_certs:${type === "certs" ? newOrderIds.join(",") : orderCerts.join(",")}]`;
+      const meta = `[terms:${typingTerms}] [chat:${chatbotContext}] [chat_name:${chatbotName}] [chat_sub:${chatbotSubtitle}] [cv_file:${cvFilename}] [email:${typingEmail}] [phone:${typingPhone}] [order_projects:${type === "projects" ? newOrderIds.join(",") : orderProjects.join(",")}] [order_experience:${type === "experience" ? newOrderIds.join(",") : orderExperience.join(",")}] [order_certs:${type === "certs" ? newOrderIds.join(",") : orderCerts.join(",")}]`;
       await supabase.from("profiles").update({ bio: `${bio} ${meta}` }).eq("id", profile.id);
     }
   }
@@ -296,7 +300,7 @@ export default function AdminPage() {
       data = { name: certName, certification_url: certUrl };
     } else if (activeTab === "profile") {
       table = "profiles";
-      const meta = `[terms:${typingTerms}] [chat:${chatbotContext}] [chat_name:${chatbotName}] [chat_sub:${chatbotSubtitle}] [cv_file:${cvFilename}] [email:${typingEmail}] [order_projects:${orderProjects.join(",")}] [order_experience:${orderExperience.join(",")}] [order_certs:${orderCerts.join(",")}]`;
+      const meta = `[terms:${typingTerms}] [chat:${chatbotContext}] [chat_name:${chatbotName}] [chat_sub:${chatbotSubtitle}] [cv_file:${cvFilename}] [email:${typingEmail}] [phone:${typingPhone}] [order_projects:${orderProjects.join(",")}] [order_experience:${orderExperience.join(",")}] [order_certs:${orderCerts.join(",")}]`;
       data = { full_name: fullName, bio: `${bio} ${meta}`, photo_url: photoUrl, cv_url: cvUrl, github_url: profileGithub, linkedin_url: profileLinkedin };
     }
 
@@ -505,6 +509,12 @@ export default function AdminPage() {
                           </Field>
                           <Field label="LinkedIn URL">
                             <input type="url" value={profileLinkedin} onChange={e => setProfileLinkedin(e.target.value)} className="saas-input" placeholder="https://linkedin.com/in/…" />
+                          </Field>
+                          <Field label="Contact email">
+                            <input type="email" value={typingEmail} onChange={e => setTypingEmail(e.target.value)} className="saas-input" placeholder="you@example.com" />
+                          </Field>
+                          <Field label="Phone (Call channel)">
+                            <input type="tel" value={typingPhone} onChange={e => setTypingPhone(e.target.value)} className="saas-input" placeholder="+977 98XXXXXXXX — leave blank to hide" />
                           </Field>
                         </div>
                       </div>
