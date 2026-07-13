@@ -1,8 +1,8 @@
 import Link from "next/link";
 
 /**
- * Friendly rounded monogram — a warm yellow tile with initials,
- * echoing the playful indie-maker aesthetic. Used by Navbar + SplashScreen + Footer.
+ * Friendly rounded monogram — a warm yellow tile with initials.
+ * Used by Navbar + SplashScreen + Footer + login + admin.
  */
 export default function Logo({
   size = 40,

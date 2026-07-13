@@ -80,7 +80,7 @@ export default function About() {
   const getIssuerInfo = (name: string, url?: string) => {
     const combined = (name + (url || "")).toLowerCase();
     if (combined.includes("coursera")) return { icon: "https://upload.wikimedia.org/wikipedia/commons/9/97/Coursera-Logo_600x600.svg", label: "Coursera" };
-    if (combined.includes("udemy")) return { icon: "https://www.vectorlogo.zone/logos/udemy/udemy-icon.svg", label: "Udemy" };
+    if (combined.includes("udemy")) return { icon: "https://cdn.simpleicons.org/udemy/A435F0", label: "Udemy" };
     if (combined.includes("linkedin")) return { icon: "https://www.vectorlogo.zone/logos/linkedin/linkedin-icon.svg", label: "LinkedIn" };
     if (combined.includes("aws") || combined.includes("amazon")) return { icon: "https://www.vectorlogo.zone/logos/amazon_aws/amazon_aws-icon.svg", label: "AWS" };
     if (combined.includes("google")) return { icon: "https://www.vectorlogo.zone/logos/google/google-icon.svg", label: "Google" };
