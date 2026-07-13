@@ -8,7 +8,6 @@ import Container from "@/components/Container";
 import { FaGithub, FaLinkedin, FaEnvelope, FaPhone } from "react-icons/fa";
 import { useProfile } from "@/context/ProfileContext";
 import { parseBio } from "@/lib/utils";
-import { supabase } from "@/lib/supabase";
 
 const COOLDOWN_MS = 10 * 60 * 1000; // 10 minutes
 const STORAGE_KEY = "contact_last_sent";
@@ -64,26 +63,27 @@ export default function Contact() {
       message: formData.get("message"),
     };
 
-    const { error: insertError } = await supabase.from("messages").insert([data]);
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      const json = await res.json().catch(() => ({}));
 
-    if (!insertError) {
-      // Send email notification
-      try {
-        await fetch("/api/contact", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(data),
-        });
-      } catch (err) {
-        console.error("Email notification failed:", err);
+      if (!res.ok) {
+        setError(json.error || "Something went wrong. Please try again or reach out directly below.");
+        setLoading(false);
+        return;
       }
+
       try {
         localStorage.setItem(STORAGE_KEY, Date.now().toString());
       } catch {}
       setCooldownLeft(Math.ceil(COOLDOWN_MS / 1000));
       setSubmitted(true);
-    } else {
-      setError("Something went wrong sending your message. Please try again or reach out directly below.");
+    } catch {
+      setError("Network error. Please try again or reach out directly below.");
     }
 
     setLoading(false);
